@@ -1,0 +1,78 @@
+{% if error %}
+<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+    <p class="text-sm text-red-700 dark:text-red-400">{{ error }}</p>
+</div>
+{% elif report %}
+<!-- Overall Improvement -->
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-3">BUFFERS Diff</h2>
+    <div class="text-center py-4">
+        <div class="text-xl font-bold {% if 'fewer' in report.overall_improvement %}text-green-600{% elif 'more' in report.overall_improvement %}text-red-600{% else %}text-gray-600{% endif %}">
+            {{ report.overall_improvement }}
+        </div>
+        <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Total disk read delta: {{ "%.1f"|format(report.total_read_delta_mb) }}MB
+        </div>
+    </div>
+
+    {% if report.before_summary and report.after_summary %}
+    <div class="grid grid-cols-2 gap-4 mt-4">
+        <div class="bg-gray-50 dark:bg-slate-900 rounded-lg p-4">
+            <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Before</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                <div>Hit: {{ report.before_summary.total_shared_hit }} | Read: {{ report.before_summary.total_shared_read }}</div>
+                <div>Disk: {{ "%.1f"|format(report.before_summary.total_disk_read_mb) }}MB | Hit %: {{ "%.1f"|format(report.before_summary.overall_hit_pct) }}%</div>
+            </div>
+        </div>
+        <div class="bg-gray-50 dark:bg-slate-900 rounded-lg p-4">
+            <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">After</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                <div>Hit: {{ report.after_summary.total_shared_hit }} | Read: {{ report.after_summary.total_shared_read }}</div>
+                <div>Disk: {{ "%.1f"|format(report.after_summary.total_disk_read_mb) }}MB | Hit %: {{ "%.1f"|format(report.after_summary.overall_hit_pct) }}%</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Per-Node Diffs -->
+{% if report.node_diffs %}
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Per-Node Changes</h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-slate-700">
+                    <th class="text-left py-2 px-3 font-medium text-gray-500">Node</th>
+                    <th class="text-left py-2 px-3 font-medium text-gray-500">Table</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-500">Before Read</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-500">After Read</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-500">Delta</th>
+                    <th class="text-left py-2 px-3 font-medium text-gray-500">Impact</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for diff in report.node_diffs %}
+                {% if diff.delta.read != 0 or diff.delta.hit != 0 %}
+                <tr class="border-b border-gray-100 dark:border-slate-700/50">
+                    <td class="py-2 px-3 font-mono text-xs">{{ diff.node_type }}</td>
+                    <td class="py-2 px-3 text-cyan-600 font-mono text-xs">{{ diff.table or '-' }}</td>
+                    <td class="py-2 px-3 text-right font-mono text-xs">{{ diff.before.read }}</td>
+                    <td class="py-2 px-3 text-right font-mono text-xs">{{ diff.after.read }}</td>
+                    <td class="py-2 px-3 text-right font-mono text-xs font-bold
+                        {% if diff.delta.read < 0 %}text-green-600{% elif diff.delta.read > 0 %}text-red-600{% else %}text-gray-400{% endif %}">
+                        {% if diff.delta.read > 0 %}+{% endif %}{{ diff.delta.read }}
+                    </td>
+                    <td class="py-2 px-3 text-xs
+                        {% if 'fewer' in diff.improvement %}text-green-600{% elif 'more' in diff.improvement %}text-red-600{% else %}text-gray-400{% endif %}">
+                        {{ diff.improvement }}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endif %}

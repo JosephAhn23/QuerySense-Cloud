@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Table Growth — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Table Growth Tracker</h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 uppercase tracking-wider">Free</span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+            Monitor table sizes over time. Detect anomalies. Project capacity needs.
+            <span class="font-medium text-gray-700 dark:text-gray-300">pganalyze charges $149+/mo for table growth trends. QuerySense gives it free.</span>
+        </p>
+    </div>
+
+    {% if report and report.get('trends') %}
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 dashboard-card-hover">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Size</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                {% set total_mb = report.get('total_db_size_mb', 0) %}
+                {% if total_mb >= 1024 %}{{ (total_mb / 1024)|round(1) }}GB{% else %}{{ total_mb|round(0)|int }}MB{% endif %}
+            </p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 dashboard-card-hover">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tables Tracked</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ report.get('trends', [])|length }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 dashboard-card-hover">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Growth Anomalies</p>
+            <p class="text-2xl font-bold {% if report.get('anomalies') %}text-red-600{% else %}text-green-600{% endif %} mt-1">{{ report.get('anomalies', [])|length }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 dashboard-card-hover">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fastest Growing</p>
+            <p class="text-lg font-bold text-yellow-600 dark:text-yellow-400 mt-1">
+                {% if report.get('trends') %}
+                    {{ report['trends'][0].get('growth_rate_mb_day', 0)|round(1) }}MB/day
+                {% else %}
+                    —
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Growth Trends Table -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden mb-6">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Growth Trends (Last 30 Days)</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                <thead class="bg-gray-50 dark:bg-slate-700/50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Table</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Size</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Growth/Day</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rows</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bloat</th>
+                        <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Trend</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                    {% for t in report.get('trends', []) %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30">
+                        <td class="px-4 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-200">{{ t.get('table', '') }}</td>
+                        <td class="px-4 py-2.5 text-sm text-right text-gray-600 dark:text-gray-400">
+                            {% set mb = t.get('current_size_mb', 0) %}
+                            {% if mb >= 1024 %}{{ (mb / 1024)|round(1) }}GB{% else %}{{ mb|round(1) }}MB{% endif %}
+                        </td>
+                        <td class="px-4 py-2.5 text-sm text-right">
+                            {% set rate = t.get('growth_rate_mb_day', 0) %}
+                            {% if rate > 10 %}
+                                <span class="text-red-600 dark:text-red-400 font-medium">+{{ rate|round(1) }}MB</span>
+                            {% elif rate > 0 %}
+                                <span class="text-yellow-600 dark:text-yellow-400">+{{ rate|round(2) }}MB</span>
+                            {% elif rate < 0 %}
+                                <span class="text-green-600 dark:text-green-400">{{ rate|round(2) }}MB</span>
+                            {% else %}
+                                <span class="text-gray-400">0</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-2.5 text-sm text-right text-gray-600 dark:text-gray-400">
+                            {{ "{:,}".format(t.get('current_rows', 0)) }}
+                        </td>
+                        <td class="px-4 py-2.5 text-sm text-right">
+                            {% set bloat = t.get('bloat_ratio', 0) * 100 %}
+                            {% if bloat > 20 %}
+                                <span class="text-red-600 font-medium">{{ bloat|round(1) }}%</span>
+                            {% elif bloat > 10 %}
+                                <span class="text-yellow-600">{{ bloat|round(1) }}%</span>
+                            {% else %}
+                                <span class="text-green-600">{{ bloat|round(1) }}%</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-2.5 text-sm text-center">
+                            {% if t.get('bloat_trend') == 'increasing' %}
+                                <span class="text-red-500">📈</span>
+                            {% elif t.get('bloat_trend') == 'decreasing' %}
+                                <span class="text-green-500">📉</span>
+                            {% else %}
+                                <span class="text-gray-400">➡️</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Projections -->
+    {% if report.get('projections') %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden mb-6">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Capacity Projections</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                <thead class="bg-gray-50 dark:bg-slate-700/50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Table</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Now</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">30 Days</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">90 Days</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">1 Year</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Warning</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                    {% for p in report.get('projections', []) %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30">
+                        <td class="px-4 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-200">{{ p.get('table', '') }}</td>
+                        {% for key in ['current_mb', '30d_mb', '90d_mb', '365d_mb'] %}
+                        <td class="px-4 py-2.5 text-sm text-right text-gray-600 dark:text-gray-400">
+                            {% set val = p.get(key, 0) %}
+                            {% if val >= 1024 %}{{ (val / 1024)|round(1) }}GB{% else %}{{ val|round(0)|int }}MB{% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="px-4 py-2.5 text-sm text-yellow-600 dark:text-yellow-400">{{ p.get('warning', '') or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Anomalies -->
+    {% if report.get('anomalies') %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-red-200 dark:border-red-800 overflow-hidden mb-6">
+        <div class="px-4 py-3 border-b border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+            <h2 class="text-sm font-semibold text-red-700 dark:text-red-300">Growth Anomalies Detected</h2>
+        </div>
+        <div class="p-4 space-y-3">
+            {% for a in report.get('anomalies', []) %}
+            <div class="flex items-start gap-3 px-3 py-2 rounded-lg bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/50">
+                <span class="{% if a.get('type') == 'growth_spike' %}text-red-500{% else %}text-green-500{% endif %} text-lg mt-0.5">
+                    {% if a.get('type') == 'growth_spike' %}📈{% else %}📉{% endif %}
+                </span>
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                        {{ a.get('table', '') }}
+                        <span class="{% if a.get('change_pct', 0) > 0 %}text-red-600{% else %}text-green-600{% endif %} font-bold">
+                            {{ a.get('change_pct', 0) }}%
+                        </span>
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ a.get('previous_size_mb', 0) }}MB → {{ a.get('current_size_mb', 0) }}MB
+                        <span class="text-gray-300 mx-1">|</span>
+                        {{ a.get('timestamp', '')[:19] }}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ a.get('suggestion', '') }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-12 text-center">
+        <div class="text-4xl mb-4">📊</div>
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">No Growth Data Yet</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
+            Start tracking table sizes by running daily snapshots. Set up a cron job for automated monitoring.
+        </p>
+        <div class="bg-gray-50 dark:bg-slate-900 rounded-lg px-6 py-4 inline-block text-left">
+            <p class="text-xs text-gray-500 mb-1">Run manually:</p>
+            <code class="text-sm font-mono text-brand-600 dark:text-brand-400">querysense growth snapshot --dsn $DB_URL</code>
+            <p class="text-xs text-gray-500 mt-3 mb-1">Or add to crontab (daily at 6am):</p>
+            <code class="text-sm font-mono text-brand-600 dark:text-brand-400">0 6 * * * querysense growth snapshot --dsn $DB_URL</code>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

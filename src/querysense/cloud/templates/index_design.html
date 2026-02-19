@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Index Design Advisor — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Index Design Advisor</h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 uppercase tracking-wider">New</span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+            Educational multi-column index design with cardinality-based ordering.
+            Explains <em>why</em> columns should be ordered, not just <em>what</em> to create.
+            Based on pganalyze Efficient Search p.17-18.
+        </p>
+    </div>
+
+    <!-- Design Form -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+        <form hx-post="/index-design/analyze" hx-target="#design-results" hx-indicator="#design-spinner">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Table Name *</label>
+                    <input type="text" name="table" required
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100"
+                        placeholder="product_events">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">All Columns * <span class="text-gray-400">(comma-separated)</span></label>
+                    <input type="text" name="columns" required
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100"
+                        placeholder="organization_id, occurred_at, event_type">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">WHERE Equality Columns <span class="text-gray-400">(col = value)</span></label>
+                    <input type="text" name="where_columns"
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100"
+                        placeholder="organization_id">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Range Columns <span class="text-gray-400">(>, <, BETWEEN)</span></label>
+                    <input type="text" name="range_columns"
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100"
+                        placeholder="occurred_at">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ORDER BY <span class="text-gray-400">(col:DESC)</span></label>
+                    <input type="text" name="order_columns"
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100"
+                        placeholder="occurred_at:DESC">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SELECT Columns <span class="text-gray-400">(for covering index)</span></label>
+                    <input type="text" name="select_columns"
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100"
+                        placeholder="id, name, amount">
+                </div>
+            </div>
+            <div class="mt-4 flex items-center gap-3">
+                <button type="submit"
+                    class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-brand-600 text-white font-medium text-sm hover:bg-brand-700 transition-colors shadow-sm">
+                    Design Index
+                </button>
+                <div id="design-spinner" class="htmx-indicator">
+                    <svg class="animate-spin h-5 w-5 text-brand-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"></path>
+                    </svg>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div id="design-results"></div>
+
+    <!-- Principles -->
+    <div class="bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-6 mt-6">
+        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Multi-Column Index Ordering Principles</h3>
+        <ol class="list-decimal list-inside text-xs text-gray-600 dark:text-gray-400 space-y-2">
+            <li><strong>Equality columns first</strong> (WHERE col = value) &mdash; narrows B-tree most efficiently</li>
+            <li><strong>Higher cardinality first</strong> among equality columns &mdash; more distinct values = more selective</li>
+            <li><strong>Range columns next</strong> (>, <, BETWEEN) &mdash; only one range column per index is efficient</li>
+            <li><strong>ORDER BY columns last</strong> &mdash; enables sort elimination (no separate Sort step)</li>
+            <li><strong>INCLUDE for covering</strong> &mdash; avoid heap fetches entirely with index-only scans</li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

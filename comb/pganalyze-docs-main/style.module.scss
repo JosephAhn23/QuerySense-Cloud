@@ -1,0 +1,195 @@
+.overviewInstallChoice, .overviewFeatureChoice {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-top: 15px;
+  gap: 12px;
+}
+.overviewInstallChoice + h2, .overviewFeatureChoice + h2 {
+  margin-top: 32px;
+}
+.overviewInstallChoiceStep, .overviewFeatureChoiceStep {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  background-color: #f8f8f8;
+  color: inherit;
+  font-size: 14px;
+
+  &:hover {
+    color: inherit;
+    border-color: #e0e0e0;
+    background-color: #f0f0f0;
+  }
+}
+
+.overviewInstallChoiceStep {
+  align-items: flex-start;
+  padding: 12px;
+  gap: 12px;
+
+  .overviewInstallChoiceProvider {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0px;
+    gap: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 19px;
+    height: 44px;
+
+    img {
+      width: 44px;
+      height: auto;
+      margin: 0px;
+      padding: 0px;
+      border: none;
+    }
+  }
+
+  .overviewInstallChoiceProviderText {
+    display: flex;
+    line-height: 19px;
+    vertical-align: middle;
+    align-items: center;
+  }
+}
+
+.overviewFeatureChoiceStep {
+  display: flex;
+  padding: 8px 10px 8px;
+
+  &:last-child {
+    margin-right: 0;
+  }
+
+  strong {
+    font-size: 16px;
+    font-weight: 600;
+    display: block;
+  }
+}
+
+@media (min-width: 640px) {
+  .overviewFeatureChoice {
+    gap: 20px;
+  }
+  .overviewInstallChoice, .overviewFeatureChoice {
+    margin-bottom: 10px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .overviewInstallChoiceProviderText {
+    min-height: 38px;
+  }
+}
+
+@media (min-width: 768px) {
+  .overviewInstallChoice {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.nav {
+  margin-bottom: 0;
+  padding-left: 0;
+  list-style: none;
+}
+.nav > li {
+  position: relative;
+  display: block;
+}
+.nav > li > a {
+  position: relative;
+  display: block;
+  padding: 10px 15px;
+}
+.nav > li > a:hover,
+.nav > li > a:focus {
+  text-decoration: none;
+  background-color: #eeeeee;
+}
+.nav > li.disabled > a {
+  color: #777777;
+}
+.nav > li.disabled > a:hover,
+.nav > li.disabled > a:focus {
+  color: #777777;
+  text-decoration: none;
+  background-color: transparent;
+  cursor: not-allowed;
+}
+.nav .open > a,
+.nav .open > a:hover,
+.nav .open > a:focus {
+  background-color: #eeeeee;
+  border-color: #337ab7;
+}
+.nav .nav-divider {
+  height: 1px;
+  margin: 9px 0;
+  overflow: hidden;
+  background-color: #e5e5e5;
+}
+.nav > li > a > img {
+  max-width: none;
+}
+.nav:before,
+.nav:after {
+  content: " ";
+  display: table;
+}
+.nav:after {
+  clear: both;
+}
+
+.navTabs {
+  border-bottom: 1px solid #ddd;
+  margin-left: 0px !important;
+}
+.navTabs > li {
+  float: left;
+  margin-bottom: -1px;
+}
+.navTabs > li > a {
+  margin-right: 2px;
+  line-height: 1.42857143;
+  border: 1px solid transparent;
+  border-radius: 4px 4px 0 0;
+}
+.navTabs > li > a:hover {
+  border-color: #eeeeee #eeeeee #ddd;
+}
+.navTabs > li.active > a,
+.navTabs > li.active > a:hover,
+.navTabs > li.active > a:focus {
+  color: #555555;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-bottom-color: transparent;
+  cursor: default;
+}
+
+.navTabs {
+  .navLink.active,
+  .navItem.show .navLink {
+    color: #555;
+    background-color: #fff;
+    border-color: #ddd #ddd transparent;
+  }
+}
+
+.tabContent {
+  > {
+    .tabPane {
+      display: none;
+    }
+    .active {
+      display: block;
+    }
+  }
+}
+
+.tabPanelTextContent {
+  margin: 24px 0px;
+}

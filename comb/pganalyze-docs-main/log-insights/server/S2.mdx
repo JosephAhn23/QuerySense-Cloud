@@ -1,0 +1,46 @@
+---
+log_classification: S2
+log_title: Database server starting
+log_category: server
+collector_key: SERVER_START
+tooltip: The Postgres server is starting up
+urgency: low
+sqlstate: n/a
+---
+
+**Example Postgres Log Output:**
+
+```
+LOG: redirecting log output to logging collector process
+LOG: ending log output to stderr
+...
+LOG: database system was shut down at 2017-05-03 23:23:37 UTC
+LOG: MultiXact member wraparound protections are now enabled
+LOG: database system is ready to accept connections
+```
+
+On a standby server you will see:
+
+```
+LOG: database system was shut down in recovery at 2017-05-05 20:17:07 UTC
+LOG: entering standby mode
+LOG: database system is ready to accept read only connections
+```
+
+**Explanation:**
+
+This log event groups together all messages that occur on a regular Postgres server start.
+
+Normally you don't need to pay attention to this event, as log lines relating to an irregular restart, e.g. due to a crash, are instead classified as [S3 - Server Start (Recovering)](/docs/log-insights/server/S3).
+
+The `database system was shut down at [ timestamp ]` line indicates when the Postgres control file was last updated, commonly this matches the time of the last checkpoint performed on the database. That same timestamp can also be accessed using the `pg_controldata` helper program (field `pg_control last modified:`) whilst the database is shut down.
+
+Also note that whilst Postgres is starting up no connections are accepted, the startup finishes with the message `database system is ready to accept connections` to indicate that connections are accepted.
+
+**Recommended Action:**
+
+No action is necessary.
+
+**Learn More:**
+
+No additional resources available.

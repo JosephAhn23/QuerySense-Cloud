@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% block title %}Compliance — QuerySense Cloud{% endblock %}
+
+{% block content %}
+<div class="sm:flex sm:items-center sm:justify-between mb-8">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Compliance Enforcement</h1>
+        <p class="mt-1 text-sm text-gray-500">Lightweight, developer-friendly compliance checking at 1/100th the cost of enterprise DAM tools.</p>
+    </div>
+</div>
+
+<!-- Inline SQL Compliance Checker -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">Quick Compliance Check</h2>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-100 text-brand-700">Interactive</span>
+    </div>
+
+    <form id="complianceForm" hx-post="/api/compliance/check" hx-target="#complianceResults" hx-swap="innerHTML" hx-indicator="#complianceLoading">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+            <div class="lg:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">SQL Query</label>
+                <textarea name="sql" rows="4" placeholder="SELECT * FROM patients WHERE diagnosis LIKE '%cancer%';"
+                          class="code-block block w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Regulations</label>
+                <div class="space-y-2 mt-2">
+                    <label class="flex items-center"><input type="checkbox" name="regulations" value="PCI-DSS" checked class="rounded border-gray-300 text-brand-600 mr-2"><span class="text-sm text-gray-700">PCI-DSS</span></label>
+                    <label class="flex items-center"><input type="checkbox" name="regulations" value="HIPAA" checked class="rounded border-gray-300 text-brand-600 mr-2"><span class="text-sm text-gray-700">HIPAA</span></label>
+                    <label class="flex items-center"><input type="checkbox" name="regulations" value="SOC2" class="rounded border-gray-300 text-brand-600 mr-2"><span class="text-sm text-gray-700">SOC 2</span></label>
+                    <label class="flex items-center"><input type="checkbox" name="regulations" value="GDPR" class="rounded border-gray-300 text-brand-600 mr-2"><span class="text-sm text-gray-700">GDPR</span></label>
+                    <label class="flex items-center"><input type="checkbox" name="regulations" value="SOX" class="rounded border-gray-300 text-brand-600 mr-2"><span class="text-sm text-gray-700">SOX</span></label>
+                </div>
+                <button type="submit" class="mt-4 w-full px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors">
+                    <span class="htmx-indicator" id="complianceLoading">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    </span>
+                    Check Compliance
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Results area -->
+    <div id="complianceResults"></div>
+</div>
+
+<!-- Compliance Packs Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    <div class="stat-card border-l-4 border-red-500 hover:border-red-600">
+        <div class="flex items-center mb-3">
+            <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-base font-semibold text-gray-900">PCI-DSS v4.0</h3>
+                <p class="text-xs text-gray-500">Payment card industry</p>
+            </div>
+        </div>
+        <ul class="space-y-1.5 text-sm text-gray-600">
+            <li class="flex items-center"><span class="severity-dot critical mr-2"></span>No SELECT * on CHD tables</li>
+            <li class="flex items-center"><span class="severity-dot high mr-2"></span>Required WHERE clause</li>
+            <li class="flex items-center"><span class="severity-dot info mr-2"></span>Audit logging validation</li>
+        </ul>
+        <div class="mt-3 pt-3 border-t border-gray-100">
+            <span class="text-xs font-medium text-red-600">3 rules</span>
+        </div>
+    </div>
+
+    <div class="stat-card border-l-4 border-blue-500 hover:border-blue-600">
+        <div class="flex items-center mb-3">
+            <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-base font-semibold text-gray-900">HIPAA</h3>
+                <p class="text-xs text-gray-500">Health information</p>
+            </div>
+        </div>
+        <ul class="space-y-1.5 text-sm text-gray-600">
+            <li class="flex items-center"><span class="severity-dot critical mr-2"></span>Minimum necessary principle</li>
+            <li class="flex items-center"><span class="severity-dot high mr-2"></span>Bulk PHI export prevention</li>
+            <li class="flex items-center"><span class="severity-dot info mr-2"></span>6-year retention validation</li>
+        </ul>
+        <div class="mt-3 pt-3 border-t border-gray-100">
+            <span class="text-xs font-medium text-blue-600">3 rules</span>
+        </div>
+    </div>
+
+    <div class="stat-card border-l-4 border-purple-500 hover:border-purple-600">
+        <div class="flex items-center mb-3">
+            <div class="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-base font-semibold text-gray-900">SOC 2</h3>
+                <p class="text-xs text-gray-500">Service organization controls</p>
+            </div>
+        </div>
+        <ul class="space-y-1.5 text-sm text-gray-600">
+            <li class="flex items-center"><span class="severity-dot high mr-2"></span>DDL change management</li>
+            <li class="flex items-center"><span class="severity-dot warning mr-2"></span>Access control logging</li>
+            <li class="flex items-center"><span class="severity-dot info mr-2"></span>Incident response alerts</li>
+        </ul>
+        <div class="mt-3 pt-3 border-t border-gray-100">
+            <span class="text-xs font-medium text-purple-600">3 rules</span>
+        </div>
+    </div>
+
+    <div class="stat-card border-l-4 border-green-500 hover:border-green-600">
+        <div class="flex items-center mb-3">
+            <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"></path></svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-base font-semibold text-gray-900">GDPR</h3>
+                <p class="text-xs text-gray-500">EU data protection</p>
+            </div>
+        </div>
+        <ul class="space-y-1.5 text-sm text-gray-600">
+            <li class="flex items-center"><span class="severity-dot warning mr-2"></span>Data minimization</li>
+            <li class="flex items-center"><span class="severity-dot info mr-2"></span>Purpose limitation</li>
+            <li class="flex items-center"><span class="severity-dot info mr-2"></span>Right to erasure support</li>
+        </ul>
+        <div class="mt-3 pt-3 border-t border-gray-100">
+            <span class="text-xs font-medium text-green-600">3 rules</span>
+        </div>
+    </div>
+
+    <div class="stat-card border-l-4 border-amber-500 hover:border-amber-600">
+        <div class="flex items-center mb-3">
+            <div class="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-base font-semibold text-gray-900">SOX</h3>
+                <p class="text-xs text-gray-500">Financial compliance</p>
+            </div>
+        </div>
+        <ul class="space-y-1.5 text-sm text-gray-600">
+            <li class="flex items-center"><span class="severity-dot high mr-2"></span>Audit trail for DML</li>
+            <li class="flex items-center"><span class="severity-dot warning mr-2"></span>Separation of duties</li>
+            <li class="flex items-center"><span class="severity-dot info mr-2"></span>7-year retention</li>
+        </ul>
+        <div class="mt-3 pt-3 border-t border-gray-100">
+            <span class="text-xs font-medium text-amber-600">3 rules</span>
+        </div>
+    </div>
+
+    <div class="stat-card border-l-4 border-gray-400 flex flex-col items-center justify-center text-center hover:border-gray-500">
+        <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mb-3">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+        </div>
+        <h3 class="text-base font-semibold text-gray-700">Custom Rules</h3>
+        <p class="text-xs text-gray-500 mt-1">Build your own compliance rules</p>
+    </div>
+</div>
+
+<!-- Tabs: Quick Start / PII Detection / Table Classification -->
+<div id="complianceTabs" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="border-b border-gray-200 px-4 flex gap-1">
+        <button class="tab-btn active" data-tab="tab-quickstart">Quick Start</button>
+        <button class="tab-btn" data-tab="tab-pii">PII Detection</button>
+        <button class="tab-btn" data-tab="tab-tables">Table Classification</button>
+        <button class="tab-btn" data-tab="tab-sarif">SARIF Reports</button>
+    </div>
+
+    <!-- Quick Start -->
+    <div id="tab-quickstart" class="tab-content active p-6">
+        <div class="space-y-5">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-sm">1</div>
+                <div class="ml-4 flex-1">
+                    <p class="text-sm font-medium text-gray-900">Initialize table classifications</p>
+                    <div class="code-block mt-2 relative group">querysense compliance init
+<button onclick="copyToClipboard('querysense compliance init', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                </div>
+            </div>
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-sm">2</div>
+                <div class="ml-4 flex-1">
+                    <p class="text-sm font-medium text-gray-900">Auto-detect PII columns</p>
+                    <div class="code-block mt-2 relative group">querysense compliance detect-pii --dsn postgresql://localhost/mydb
+<button onclick="copyToClipboard('querysense compliance detect-pii --dsn postgresql://localhost/mydb', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                </div>
+            </div>
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-sm">3</div>
+                <div class="ml-4 flex-1">
+                    <p class="text-sm font-medium text-gray-900">Run compliance checks</p>
+                    <div class="code-block mt-2 relative group">querysense compliance check query.sql --regulations PCI-DSS,HIPAA
+<button onclick="copyToClipboard('querysense compliance check query.sql --regulations PCI-DSS,HIPAA', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                </div>
+            </div>
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-sm">4</div>
+                <div class="ml-4 flex-1">
+                    <p class="text-sm font-medium text-gray-900">Generate SARIF for GitHub Code Scanning</p>
+                    <div class="code-block mt-2 relative group">querysense compliance check query.sql --format sarif > report.sarif
+<button onclick="copyToClipboard('querysense compliance check query.sql --format sarif > report.sarif', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PII Detection -->
+    <div id="tab-pii" class="tab-content p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">Auto-PII Detection</h3>
+        <p class="text-sm text-gray-500 mb-4">QuerySense can automatically detect potential PII columns by analyzing column names against known patterns.</p>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">PII Type</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Column Patterns</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Example</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Email</td><td class="px-4 py-2 text-sm text-gray-500 font-mono">email, email_address, user_email</td><td class="px-4 py-2 text-sm text-gray-400">user@example.com</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Phone</td><td class="px-4 py-2 text-sm text-gray-500 font-mono">phone, phone_number, mobile</td><td class="px-4 py-2 text-sm text-gray-400">+1-555-0123</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">SSN</td><td class="px-4 py-2 text-sm text-gray-500 font-mono">ssn, social_security, sin</td><td class="px-4 py-2 text-sm text-gray-400">***-**-1234</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Credit Card</td><td class="px-4 py-2 text-sm text-gray-500 font-mono">card_number, cc_number, pan</td><td class="px-4 py-2 text-sm text-gray-400">****-****-****-1234</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Name</td><td class="px-4 py-2 text-sm text-gray-500 font-mono">first_name, last_name, full_name</td><td class="px-4 py-2 text-sm text-gray-400">John Doe</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Address</td><td class="px-4 py-2 text-sm text-gray-500 font-mono">address, street, zip_code</td><td class="px-4 py-2 text-sm text-gray-400">123 Main St</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-medium text-gray-900">Health Info</td><td class="px-4 py-2 text-sm text-gray-500 font-mono">diagnosis, medication, blood_type</td><td class="px-4 py-2 text-sm text-gray-400">PHI data</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Table Classification -->
+    <div id="tab-tables" class="tab-content p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">Table Classification (.querysense/tables.yml)</h3>
+        <div class="code-block relative group"><span style="color:#93c5fd">tables:</span>
+  <span style="color:#fcd34d">payments:</span>
+    <span style="color:#93c5fd">classification:</span> restricted
+    <span style="color:#93c5fd">regulations:</span> [PCI-DSS, SOX]
+    <span style="color:#93c5fd">columns:</span>
+      <span style="color:#fcd34d">card_number:</span> { pii: true, type: credit_card }
+      <span style="color:#fcd34d">cardholder_name:</span> { pii: true, type: name }
+      <span style="color:#fcd34d">amount:</span> { pii: false }
+
+  <span style="color:#fcd34d">patients:</span>
+    <span style="color:#93c5fd">classification:</span> restricted
+    <span style="color:#93c5fd">regulations:</span> [HIPAA]
+    <span style="color:#93c5fd">columns:</span>
+      <span style="color:#fcd34d">diagnosis:</span> { pii: true, type: health_info }
+      <span style="color:#fcd34d">ssn:</span> { pii: true, type: ssn }
+
+  <span style="color:#fcd34d">users:</span>
+    <span style="color:#93c5fd">classification:</span> confidential
+    <span style="color:#93c5fd">regulations:</span> [GDPR]
+    <span style="color:#93c5fd">columns:</span>
+      <span style="color:#fcd34d">email:</span> { pii: true, type: email }
+      <span style="color:#fcd34d">phone:</span> { pii: true, type: phone }
+<button onclick="copyToClipboard(this.parentElement.innerText, this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+    </div>
+
+    <!-- SARIF -->
+    <div id="tab-sarif" class="tab-content p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">SARIF Integration</h3>
+        <p class="text-sm text-gray-500 mb-4">Generate machine-readable SARIF reports compatible with GitHub Code Scanning, Azure DevOps, and other security tools.</p>
+        <div class="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-6 text-white">
+            <div class="flex items-center mb-4">
+                <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"></path></svg>
+                <span class="text-sm font-semibold">GitHub Code Scanning Integration</span>
+            </div>
+            <div class="code-block bg-black/30 border border-white/10">
+<span style="color:#6ee7b7"># In your GitHub Actions workflow</span>
+- name: Run compliance check
+  run: querysense compliance check sql/ --format sarif > results.sarif
+
+- name: Upload SARIF
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initTabs('complianceTabs');
+});
+</script>
+{% endblock %}

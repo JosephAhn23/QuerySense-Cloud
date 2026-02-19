@@ -1,0 +1,34 @@
+Note that both individual files and directories are supported for `db_log_location`.
+
+If the `db_log_location` was discovered by the collector, you only need to confirm
+that the pganalyze user has access to the log files. Check this with ls:
+
+<CodeBlock language="bash">
+{`ls -l [discovered_log_location]`}
+</CodeBlock>
+
+This will show output like
+
+```
+-rw-r----- 1 postgres adm 0 Feb 17 00:00 /var/log/postgresql/postgresql-13-main.log
+```
+
+The fourth field here (`adm` in this case) is the group that owns the log files. If
+this is **not** `adm` on your system, you should add the pganalyze user to this group.
+E.g., if the owning group is `postgres`, run the following:
+
+<CodeBlock language="bash">
+{`sudo usermod -a -G postgres pganalyze`}
+</CodeBlock>
+
+Then, update the file permissions of newly created log files to ensure group read
+permissions:
+
+<CodeBlock language="sql">
+{`ALTER SYSTEM SET log_file_mode = '0640';
+SELECT pg_reload_conf();`}
+</CodeBlock>
+
+**Important:** If you changed the group membership of the `pganalyze` user you will need to restart
+the pganalyze collector for the change to take effect. You can do so after updating the
+configuration in the next step.

@@ -1,0 +1,100 @@
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+      - "[0-9].x"
+
+name: Continuous integration
+
+jobs:
+  ci:
+    env:
+      RUSTFLAGS: ${{ matrix.rust == 'nightly' && matrix.os == 'ubuntu-latest' && '-Z sanitizer=leak' || '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+          - nightly
+        os:
+          - ubuntu-latest
+          - windows-latest
+        include:
+          - rust: stable-x86_64-pc-windows-gnu
+            os: windows-latest
+          - rust: stable-i686-pc-windows-msvc
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ matrix.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Install rustup if needed
+        run: |
+          if ! command -v rustup &>/dev/null; then
+            curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
+            echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> $GITHUB_PATH
+          fi
+        if: runner.os != 'Windows'
+        shell: bash
+
+      - name: Install toolchain
+        run: rustup toolchain install ${{ matrix.rust }} --profile minimal --no-self-update
+        shell: bash
+
+      - name: Default to nightly if requested
+        run: rustup default nightly
+        if: matrix.rust == 'nightly'
+
+      - name: Build pg_query
+        run: cargo build
+
+      - name: Run tests
+        run: cargo test
+
+  check_style:
+    name: Check file formatting and style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install rustup if needed
+        run: |
+          if ! command -v rustup &>/dev/null; then
+            curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail "https://sh.rustup.rs" | sh -s -- --default-toolchain none -y
+            echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> $GITHUB_PATH
+          fi
+        if: runner.os != 'Windows'
+        shell: bash
+
+      - name: Install toolchain
+        run: rustup toolchain install stable --component clippy --component rustfmt --profile minimal --no-self-update
+        shell: bash
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: clippy-cargo-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Check file formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy

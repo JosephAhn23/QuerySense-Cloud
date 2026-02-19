@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}HA Cluster — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">HA Cluster Monitor</h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 uppercase tracking-wider">New</span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+            Replication lag, WAL metrics, checkpoint analysis, and Patroni cluster status.
+            Closes the gap vs Percona PMM 3.3.0's HA dashboards.
+        </p>
+    </div>
+
+    <!-- Connection Form -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+        <form hx-post="/ha/analyze" hx-target="#ha-results" hx-indicator="#ha-spinner">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        PostgreSQL Connection (Primary)
+                    </label>
+                    <input type="text" name="dsn" required
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100 placeholder-gray-400"
+                        placeholder="postgresql://user:pass@primary:5432/mydb">
+                </div>
+                <button type="submit"
+                    class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-brand-600 text-white font-medium text-sm hover:bg-brand-700 transition-colors shadow-sm">
+                    Analyze Cluster
+                </button>
+            </div>
+        </form>
+        <div id="ha-spinner" class="htmx-indicator mt-4">
+            <div class="flex items-center justify-center py-6">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+                <span class="ml-3 text-sm text-gray-500">Querying pg_stat_replication, pg_stat_bgwriter...</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="ha-results"></div>
+</div>
+{% endblock %}

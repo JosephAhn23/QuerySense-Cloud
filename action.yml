@@ -1,0 +1,123 @@
+# QuerySense GitHub Action
+# Lint your SQL performance in CI — catch slow queries before production.
+#
+# Usage (simplest):
+#   - uses: JosephAhn23/Query-Sense@v1
+#
+# Usage (with options):
+#   - uses: JosephAhn23/Query-Sense@v1
+#     with:
+#       plans: "plans/**/*.json"
+#       fail-on: warning
+#
+# Usage (with step outputs):
+#   - uses: JosephAhn23/Query-Sense@v1
+#     id: querysense
+#   - if: steps.querysense.outputs.result == 'fail'
+#     run: echo "QuerySense found ${{ steps.querysense.outputs.critical_count }} critical issues"
+
+name: "QuerySense"
+description: "Lint SQL query performance in CI/CD. Analyzes EXPLAIN plans, detects slow queries, blocks PRs with performance regressions."
+author: "Joseph Ahn"
+
+branding:
+  icon: "zap"
+  color: "blue"
+
+inputs:
+  plans:
+    description: "Glob pattern for EXPLAIN JSON files"
+    required: false
+    default: ""
+  fail-on:
+    description: "Minimum severity to fail: critical, warning, info, none"
+    required: false
+    default: ""
+  config:
+    description: "Path to .querysense-ci.yml config file"
+    required: false
+    default: ""
+  python-version:
+    description: "Python version to use"
+    required: false
+    default: "3.12"
+  querysense-version:
+    description: "QuerySense version to install (empty for latest)"
+    required: false
+    default: ""
+  allow-plain:
+    description: "Allow EXPLAIN without ANALYZE data"
+    required: false
+    default: "false"
+  markdown-artifact:
+    description: "Save PR comment markdown as artifact with this name (empty to skip)"
+    required: false
+    default: ""
+
+outputs:
+  result:
+    description: "'pass' or 'fail'"
+    value: ${{ steps.gate.outputs.result }}
+  critical_count:
+    description: "Number of critical findings"
+    value: ${{ steps.gate.outputs.critical_count }}
+  warning_count:
+    description: "Number of warning findings"
+    value: ${{ steps.gate.outputs.warning_count }}
+  info_count:
+    description: "Number of info findings"
+    value: ${{ steps.gate.outputs.info_count }}
+  regression_count:
+    description: "Number of plan regressions"
+    value: ${{ steps.gate.outputs.regression_count }}
+  total_plans:
+    description: "Number of plans analyzed"
+    value: ${{ steps.gate.outputs.total_plans }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install QuerySense
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.querysense-version }}" ]; then
+          pip install "querysense==${{ inputs.querysense-version }}"
+        else
+          pip install querysense
+        fi
+
+    - name: Run QuerySense gate
+      id: gate
+      shell: bash
+      run: |
+        ARGS=""
+        if [ -n "${{ inputs.plans }}" ]; then
+          ARGS="${{ inputs.plans }}"
+        fi
+        if [ -n "${{ inputs.fail-on }}" ]; then
+          ARGS="$ARGS --fail-on ${{ inputs.fail-on }}"
+        fi
+        if [ -n "${{ inputs.config }}" ]; then
+          ARGS="$ARGS --config ${{ inputs.config }}"
+        fi
+        if [ "${{ inputs.allow-plain }}" = "true" ]; then
+          ARGS="$ARGS --allow-plain"
+        fi
+        if [ -n "${{ inputs.markdown-artifact }}" ]; then
+          ARGS="$ARGS --markdown querysense-comment.md"
+        fi
+
+        querysense ci gate $ARGS
+
+    - name: Upload markdown artifact
+      if: always() && inputs.markdown-artifact != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.markdown-artifact }}
+        path: querysense-comment.md
+        if-no-files-found: ignore

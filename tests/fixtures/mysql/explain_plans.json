@@ -1,0 +1,243 @@
+{
+  "full_table_scan": [
+    {
+      "id": 1,
+      "select_type": "SIMPLE",
+      "table": "orders",
+      "partitions": null,
+      "type": "ALL",
+      "possible_keys": null,
+      "key": null,
+      "key_len": null,
+      "ref": null,
+      "rows": 250000,
+      "filtered": 10.0,
+      "Extra": "Using where"
+    }
+  ],
+  
+  "missing_index": [
+    {
+      "id": 1,
+      "select_type": "SIMPLE",
+      "table": "users",
+      "partitions": null,
+      "type": "ALL",
+      "possible_keys": "idx_email,idx_status",
+      "key": null,
+      "key_len": null,
+      "ref": null,
+      "rows": 100000,
+      "filtered": 10.0,
+      "Extra": "Using where"
+    }
+  ],
+  
+  "using_filesort": [
+    {
+      "id": 1,
+      "select_type": "SIMPLE",
+      "table": "products",
+      "partitions": null,
+      "type": "ALL",
+      "possible_keys": null,
+      "key": null,
+      "key_len": null,
+      "ref": null,
+      "rows": 50000,
+      "filtered": 100.0,
+      "Extra": "Using filesort"
+    }
+  ],
+  
+  "using_temporary": [
+    {
+      "id": 1,
+      "select_type": "SIMPLE",
+      "table": "sales",
+      "partitions": null,
+      "type": "ALL",
+      "possible_keys": null,
+      "key": null,
+      "key_len": null,
+      "ref": null,
+      "rows": 75000,
+      "filtered": 100.0,
+      "Extra": "Using temporary; Using filesort"
+    }
+  ],
+  
+  "good_query": [
+    {
+      "id": 1,
+      "select_type": "SIMPLE",
+      "table": "users",
+      "partitions": null,
+      "type": "ref",
+      "possible_keys": "idx_email",
+      "key": "idx_email",
+      "key_len": 767,
+      "ref": "const",
+      "rows": 1,
+      "filtered": 100.0,
+      "Extra": "Using index condition"
+    }
+  ],
+  
+  "join_with_bad_access": [
+    {
+      "id": 1,
+      "select_type": "SIMPLE",
+      "table": "orders",
+      "partitions": null,
+      "type": "ALL",
+      "possible_keys": null,
+      "key": null,
+      "key_len": null,
+      "ref": null,
+      "rows": 50000,
+      "filtered": 100.0,
+      "Extra": "Using where"
+    },
+    {
+      "id": 1,
+      "select_type": "SIMPLE",
+      "table": "order_items",
+      "partitions": null,
+      "type": "ALL",
+      "possible_keys": "idx_order_id",
+      "key": null,
+      "key_len": null,
+      "ref": null,
+      "rows": 200000,
+      "filtered": 10.0,
+      "Extra": "Using where; Using join buffer (hash join)"
+    }
+  ],
+
+  "json_full_table_scan": {
+    "query_block": {
+      "select_id": 1,
+      "cost_info": {
+        "query_cost": "25843.00"
+      },
+      "table": {
+        "table_name": "orders",
+        "access_type": "ALL",
+        "possible_keys": null,
+        "key": null,
+        "rows_examined_per_scan": 250000,
+        "rows_produced_per_join": 25000,
+        "filtered": "10.00",
+        "cost_info": {
+          "read_cost": "23343.00",
+          "eval_cost": "2500.00",
+          "prefix_cost": "25843.00"
+        },
+        "used_columns": ["id", "customer_id", "status", "total", "created_at"],
+        "attached_condition": "(`testdb`.`orders`.`status` = 'pending')"
+      }
+    }
+  },
+
+  "json_with_filesort": {
+    "query_block": {
+      "select_id": 1,
+      "cost_info": {
+        "query_cost": "25843.00"
+      },
+      "ordering_operation": {
+        "using_filesort": true,
+        "table": {
+          "table_name": "orders",
+          "access_type": "ALL",
+          "possible_keys": null,
+          "key": null,
+          "rows_examined_per_scan": 250000,
+          "rows_produced_per_join": 250000,
+          "filtered": "100.00",
+          "cost_info": {
+            "read_cost": "843.00",
+            "eval_cost": "25000.00"
+          },
+          "used_columns": ["id", "customer_id", "status", "total", "created_at"]
+        }
+      }
+    }
+  },
+
+  "json_nested_loop_join": {
+    "query_block": {
+      "select_id": 1,
+      "cost_info": {
+        "query_cost": "125000.00"
+      },
+      "nested_loop": [
+        {
+          "table": {
+            "table_name": "orders",
+            "access_type": "ALL",
+            "possible_keys": null,
+            "key": null,
+            "rows_examined_per_scan": 50000,
+            "filtered": "100.00",
+            "attached_condition": "(`testdb`.`orders`.`status` = 'pending')"
+          }
+        },
+        {
+          "table": {
+            "table_name": "order_items",
+            "access_type": "ref",
+            "possible_keys": ["idx_order_id"],
+            "key": "idx_order_id",
+            "key_length": "4",
+            "ref": ["testdb.orders.id"],
+            "rows_examined_per_scan": 5,
+            "filtered": "100.00"
+          }
+        }
+      ]
+    }
+  },
+
+  "json_good_query": {
+    "query_block": {
+      "select_id": 1,
+      "cost_info": {
+        "query_cost": "0.35"
+      },
+      "table": {
+        "table_name": "users",
+        "access_type": "const",
+        "possible_keys": ["PRIMARY", "idx_email"],
+        "key": "idx_email",
+        "key_length": "767",
+        "ref": ["const"],
+        "rows_examined_per_scan": 1,
+        "filtered": "100.00",
+        "using_index": true
+      }
+    }
+  },
+
+  "json_with_temporary": {
+    "query_block": {
+      "select_id": 1,
+      "cost_info": {
+        "query_cost": "50000.00"
+      },
+      "grouping_operation": {
+        "using_temporary_table": true,
+        "using_filesort": true,
+        "table": {
+          "table_name": "orders",
+          "access_type": "ALL",
+          "possible_keys": null,
+          "key": null,
+          "rows_examined_per_scan": 250000,
+          "filtered": "100.00"
+        }
+      }
+    }
+  }
+}

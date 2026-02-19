@@ -1,0 +1,42 @@
+---
+work_in_progress: true
+log_classification: V103
+log_title: Check constraint violation
+log_category: constraint-violations
+collector_key: CHECK_CONSTRAINT_VIOLATION
+tooltip: Check constraint is violated by inserted/updated data
+urgency: low
+sqlstate: "23514 (Class 23 — Integrity Constraint Violation: check_violation)"
+color: "#8A2BE2"
+---
+
+**Example Postgres Log Output:**
+
+```
+ERROR: new row for relation "test" violates check constraint "positive_value_check"
+DETAIL: Failing row contains (-123).
+```
+
+```
+ERROR: check constraint "valid_tag" is violated by some row
+```
+
+```
+ERROR: column "mycolumn" of table "test" contains values that violate the new constraint
+```
+
+```
+ERROR: value for domain mydomain violates check constraint "mydomain_check"
+```
+
+**Explanation:**
+
+...
+
+**Recommended Action:**
+
+...
+
+**Learn More:**
+
+No additional resources available.

@@ -1,0 +1,59 @@
+---
+title: 'Step 1: Create Monitoring User'
+install_track_title: Installation Guide (Google Cloud SQL and AlloyDB)
+backlink_href: /docs/install
+backlink_title: 'Installation Guide'
+---
+
+import TabPanel, {TabTextContent} from '../../components/TabPanel'
+import CreateMonitoringUserPsql from './_01_create_monitoring_user_psql.mdx'
+import CreateMonitoringUserIam from './_01_create_monitoring_user_iam.mdx'
+
+export const MonitoringUserCreation = () => {
+  const tabs = [
+    [ 'psql', 'Manually with psql' ],
+    [ 'iam', 'IAM Authentication'],
+  ];
+  return (
+    <TabPanel items={tabs}>
+      {(idx) => {
+        const tab = tabs[idx][0];
+        switch (tab) {
+          case 'psql':
+            return <TabTextContent><CreateMonitoringUserPsql /></TabTextContent>;
+          case 'iam':
+            return <TabTextContent><CreateMonitoringUserIam /></TabTextContent>;
+          default:
+            return null;
+        }
+      }}
+    </TabPanel>
+  )
+}
+
+We recommend creating a separate monitoring user on your PostgreSQL database for pganalyze.
+
+## Enabling pg_stat_statements
+
+Connect to your database with **cloudsqlsuperuser / alloydbsuperuser** privileges (i.e. the initial user that was created on instance creation), e.g. using `psql`.
+
+Run the following SQL commands to enable the `pg_stat_statements` extension, and make sure it was installed correctly:
+
+<CodeBlock language="sql">
+{`CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+SELECT * FROM pg_stat_statements LIMIT 1;`}
+</CodeBlock>
+
+## Create monitoring user
+
+You can either create a monitoring user manually using psql, or create a service account and use IAM authentication.
+
+<MonitoringUserCreation />
+
+---
+
+Next we continue by installing the pganalyze collector:
+
+<Link className="btn btn-success" to="02_install_the_collector">
+  Proceed to Step 2: Install the collector
+</Link>

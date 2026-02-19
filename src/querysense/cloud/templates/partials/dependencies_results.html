@@ -1,0 +1,97 @@
+{% if error %}
+<div class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+    <p class="text-sm text-red-700 dark:text-red-300">{{ error }}</p>
+</div>
+{% elif report %}
+
+<!-- Summary -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Table</p>
+        <p class="text-lg font-bold text-gray-900 dark:text-white font-mono">{{ report.schema }}.{{ report.table }}</p>
+        <p class="text-xs text-gray-400 mt-1">{{ "{:,}".format(report.row_count) }} rows</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Columns Analyzed</p>
+        <p class="text-lg font-bold text-gray-900 dark:text-white">{{ report.columns | join(", ") }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Correlations</p>
+        {% set correlated_count = report.pair_analyses | selectattr("has_correlation") | list | length %}
+        <p class="text-xl font-bold {% if correlated_count > 0 %}text-red-600{% else %}text-green-600{% endif %}">
+            {{ correlated_count }} / {{ report.pair_analyses | length }}
+        </p>
+    </div>
+</div>
+
+<!-- Pair Analysis -->
+{% for pair in report.pair_analyses %}
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border {% if pair.has_correlation %}border-red-300 dark:border-red-800{% else %}border-green-300 dark:border-green-800{% endif %} p-5 mb-4">
+    <div class="flex items-center gap-3 mb-3">
+        {% if pair.has_correlation %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold
+            {% if pair.severity == 'CRITICAL' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400
+            {% elif pair.severity == 'HIGH' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400
+            {% else %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400{% endif %}">
+            {{ pair.severity }}
+        </span>
+        {% else %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">OK</span>
+        {% endif %}
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+            {{ pair.col_a }} &harr; {{ pair.col_b }}
+        </h3>
+        {% if pair.is_functionally_dependent %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400">FUNCTIONAL DEPENDENCY</span>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-3">
+        <div>
+            <span class="text-gray-500">Distinct {{ pair.col_a }}</span>
+            <p class="font-mono font-bold text-gray-900 dark:text-white">{{ "{:,}".format(pair.distinct_a) }}</p>
+        </div>
+        <div>
+            <span class="text-gray-500">Distinct {{ pair.col_b }}</span>
+            <p class="font-mono font-bold text-gray-900 dark:text-white">{{ "{:,}".format(pair.distinct_b) }}</p>
+        </div>
+        <div>
+            <span class="text-gray-500">Combined Distinct</span>
+            <p class="font-mono font-bold text-gray-900 dark:text-white">{{ "{:,}".format(pair.distinct_combined) }}</p>
+        </div>
+        <div>
+            <span class="text-gray-500">Overestimate Ratio</span>
+            <p class="font-mono font-bold {% if pair.overestimate_ratio > 10 %}text-red-600{% elif pair.overestimate_ratio > 2 %}text-yellow-600{% else %}text-green-600{% endif %}">
+                {{ pair.overestimate_ratio }}x
+            </p>
+        </div>
+    </div>
+
+    {% if pair.has_correlation and pair.top_combinations %}
+    <div class="text-xs text-gray-500 dark:text-gray-400">
+        <p class="font-medium mb-1">Top value combinations:</p>
+        {% for combo in pair.top_combinations[:5] %}
+        <span class="inline-block bg-gray-100 dark:bg-slate-700 rounded px-2 py-0.5 mr-1 mb-1 font-mono">
+            {{ pair.col_a }}={{ combo.a }}, {{ pair.col_b }}={{ combo.b }}: {{ "{:,}".format(combo.count) }} ({{ combo.pct | round(1) }}%)
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+
+<!-- Recommendation -->
+{% if report.has_correlations %}
+<div class="bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-800 rounded-xl p-5 mt-4">
+    <h3 class="text-sm font-semibold text-green-800 dark:text-green-300 mb-2">Recommendation: CREATE STATISTICS</h3>
+    <pre class="bg-gray-900 rounded-lg p-4 text-sm font-mono text-green-400 overflow-x-auto">{{ report.create_stats_sql }}</pre>
+</div>
+{% endif %}
+
+{% if report.existing_stats %}
+<div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+    Existing extended statistics: {{ report.existing_stats | join(", ") }}
+</div>
+{% endif %}
+
+{% endif %}

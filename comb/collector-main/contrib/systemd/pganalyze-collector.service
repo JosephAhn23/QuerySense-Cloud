@@ -1,0 +1,16 @@
+[Unit]
+Description=Statistics collector for the pganalyze database monitoring service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/pganalyze-collector --config=/etc/pganalyze-collector.conf --statefile=/var/lib/pganalyze-collector/state --no-log-timestamps
+ExecReload=/bin/kill -HUP $MAINPID
+User=pganalyze
+ProtectSystem=full
+ProtectHome=true
+CapabilityBoundingSet=CAP_SYS_PTRACE CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE
+MemoryMax=1024M
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

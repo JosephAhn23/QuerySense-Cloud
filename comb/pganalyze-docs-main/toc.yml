@@ -1,0 +1,40 @@
+- root: true
+  items:
+  - name: Overview
+    href: ""
+  - name: Installation Guide
+    href: install
+  - name: pganalyze Collector
+    href: collector
+  - name: Query Performance
+    href: query-performance
+  - name: Query Advisor
+    href: query-advisor
+  - name: EXPLAIN Plans
+    href: explain
+  - name: Workbooks
+    href: workbooks
+  - name: Index Advisor
+    href: index-advisor
+  - name: Indexing Engine
+    href: indexing-engine
+  - name: VACUUM Advisor
+    href: vacuum-advisor
+  - name: Schema Statistics
+    href: schema-statistics
+  - name: Log Insights
+    href: log-insights
+  - name: Connections
+    href: connections
+  - name: Alerts & Check-Up
+    href: checks
+  - name: Account Management
+    href: accounts
+  - name: OpenTelemetry Integration
+    href: opentelemetry
+  - name: pganalyze Enterprise Server
+    href: enterprise
+  - name: pganalyze GraphQL API
+    href: api
+  - name: Open-Source Components
+    href: open_source_components

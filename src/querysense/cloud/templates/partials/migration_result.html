@@ -1,0 +1,121 @@
+<!-- Migration safety check result (HTMX partial) -->
+<div class="space-y-4">
+    <!-- Status banner -->
+    {% if report.safe %}
+    <div class="rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
+        <div class="flex items-center gap-2">
+            <svg class="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <h3 class="text-sm font-bold text-green-800 dark:text-green-300">SAFE</h3>
+        </div>
+        <p class="mt-1 text-xs text-green-700 dark:text-green-400">
+            {{ report.statements|length }} statement(s) analyzed — no critical risks found
+        </p>
+    </div>
+    {% else %}
+    <div class="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+        <div class="flex items-center gap-2">
+            <svg class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <h3 class="text-sm font-bold text-red-800 dark:text-red-300">UNSAFE — {{ report.risks|length }} risk(s) found</h3>
+        </div>
+        <p class="mt-1 text-xs text-red-700 dark:text-red-400">
+            {{ report.statements|length }} statement(s) analyzed
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Risks table -->
+    {% if report.risks %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Risks Identified</h3>
+        </div>
+        <div class="divide-y divide-gray-200 dark:divide-slate-700">
+            {% for risk in report.risks %}
+            <div class="px-4 py-3">
+                <div class="flex items-center gap-2 mb-1">
+                    {% if risk.severity == "critical" %}
+                    <span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-xs font-bold text-red-800 dark:text-red-300">CRIT</span>
+                    {% elif risk.severity == "warning" %}
+                    <span class="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 text-xs font-bold text-yellow-800 dark:text-yellow-300">WARN</span>
+                    {% else %}
+                    <span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-bold text-blue-800 dark:text-blue-300">INFO</span>
+                    {% endif %}
+                    <code class="text-xs font-mono text-gray-600 dark:text-gray-400">{{ risk.rule }}</code>
+                </div>
+                <p class="text-sm text-gray-900 dark:text-gray-200">{{ risk.message }}</p>
+                {% if risk.suggestion %}
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="font-medium">Fix:</span> {{ risk.suggestion }}
+                </p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Rollback SQL -->
+    {% if rollback_plan %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                    Rollback SQL
+                    {% if rollback_plan.is_safe %}
+                    <span class="ml-2 inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-300">Safe</span>
+                    {% else %}
+                    <span class="ml-2 inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-300">Partial</span>
+                    {% endif %}
+                </h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {{ rollback_plan.rollback_statements|length }} reversible statement(s)
+                    {% if rollback_plan.irreversible_statements %}
+                    · {{ rollback_plan.irreversible_statements|length }} manual step(s)
+                    {% endif %}
+                </p>
+            </div>
+            <button onclick="navigator.clipboard.writeText(document.getElementById('rollback-sql').textContent).then(() => this.textContent = 'Copied!')"
+                class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium">
+                Copy
+            </button>
+        </div>
+        <pre id="rollback-sql" class="p-4 overflow-x-auto text-sm font-mono text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-slate-900 max-h-96">{{ rollback_plan.rollback_sql }}</pre>
+
+        {% if rollback_plan.warnings %}
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-slate-700 bg-yellow-50 dark:bg-yellow-900/10">
+            {% for w in rollback_plan.warnings %}
+            <p class="text-xs text-yellow-700 dark:text-yellow-400 flex items-start gap-1">
+                <span class="mt-0.5">⚠</span> {{ w }}
+            </p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if rollback_plan.dependent_objects %}
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-slate-700">
+            <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Dependent Objects</h4>
+            {% for dep in rollback_plan.dependent_objects %}
+            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mb-1">
+                <span class="inline-flex items-center rounded bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 font-mono">{{ dep.object_type }}</span>
+                <span>{{ dep.schema }}.{{ dep.name }}</span>
+                <span class="text-gray-400 dark:text-gray-500">depends on {{ dep.depends_on_table }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Competitor comparison -->
+    <div class="rounded-lg bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+            <strong>Free forever.</strong>
+            Liquibase Pro charges for rollbacks. Flyway Teams paywalls undo.
+            QuerySense gives you dependency-aware rollback + safety analysis for free.
+        </p>
+    </div>
+</div>

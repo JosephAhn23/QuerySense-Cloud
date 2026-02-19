@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Billing & Usage - QuerySense Cloud{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Billing & Usage</h1>
+    <p class="mt-1 text-sm text-gray-500">Manage your subscription and monitor usage.</p>
+</div>
+
+<!-- Current Plan -->
+<div class="bg-white shadow rounded-lg p-6 mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900">Current Plan</h2>
+            <div class="mt-2 flex items-center gap-3">
+                <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold
+                    {% if tier == 'community' %}bg-gray-100 text-gray-700
+                    {% elif tier == 'pro' %}bg-indigo-100 text-indigo-700
+                    {% elif tier == 'team' %}bg-purple-100 text-purple-700
+                    {% else %}bg-amber-100 text-amber-700{% endif %}">
+                    {{ limits.display_name }}
+                </span>
+                <span class="text-sm text-gray-500">
+                    {% if limits.price_monthly == 0 %}
+                    Free forever
+                    {% elif limits.price_monthly %}
+                    {{ limits.price_label }}
+                    {% else %}
+                    Custom pricing
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        {% if tier == 'community' or tier == 'pro' %}
+        <a href="/pricing" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+            Upgrade
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Usage This Period -->
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+    <!-- Plans Today -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <dt class="text-sm font-medium text-gray-500">Plans Today</dt>
+        <dd class="mt-2 flex items-baseline gap-2">
+            <span class="text-3xl font-semibold text-gray-900">{{ usage.plans_today }}</span>
+            {% if limits.plans_per_day > 0 %}
+            <span class="text-sm text-gray-400">/ {{ limits.plans_per_day }}</span>
+            {% else %}
+            <span class="text-sm text-gray-400">/ unlimited</span>
+            {% endif %}
+        </dd>
+        {% if limits.plans_per_day > 0 %}
+        <div class="mt-3 w-full bg-gray-200 rounded-full h-2">
+            {% set pct = (usage.plans_today / limits.plans_per_day * 100) | int %}
+            <div class="h-2 rounded-full {% if pct >= 90 %}bg-red-500{% elif pct >= 70 %}bg-amber-500{% else %}bg-indigo-500{% endif %}"
+                 style="width: {{ [pct, 100] | min }}%"></div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- API Calls This Month -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <dt class="text-sm font-medium text-gray-500">API Calls (Month)</dt>
+        <dd class="mt-2 flex items-baseline gap-2">
+            <span class="text-3xl font-semibold text-gray-900">{{ "{:,}".format(usage.api_calls_month) }}</span>
+            {% if limits.api_calls_per_month > 0 %}
+            <span class="text-sm text-gray-400">/ {{ "{:,}".format(limits.api_calls_per_month) }}</span>
+            {% else %}
+            <span class="text-sm text-gray-400">/ unlimited</span>
+            {% endif %}
+        </dd>
+        {% if limits.api_calls_per_month > 0 %}
+        <div class="mt-3 w-full bg-gray-200 rounded-full h-2">
+            {% set pct = (usage.api_calls_month / limits.api_calls_per_month * 100) | int %}
+            <div class="h-2 rounded-full {% if pct >= 90 %}bg-red-500{% elif pct >= 70 %}bg-amber-500{% else %}bg-indigo-500{% endif %}"
+                 style="width: {{ [pct, 100] | min }}%"></div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Stored Plans -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <dt class="text-sm font-medium text-gray-500">Stored Plans</dt>
+        <dd class="mt-2 flex items-baseline gap-2">
+            <span class="text-3xl font-semibold text-gray-900">{{ "{:,}".format(usage.stored_plans) }}</span>
+            {% if limits.max_stored_plans > 0 %}
+            <span class="text-sm text-gray-400">/ {{ "{:,}".format(limits.max_stored_plans) }}</span>
+            {% else %}
+            <span class="text-sm text-gray-400">/ unlimited</span>
+            {% endif %}
+        </dd>
+    </div>
+
+    <!-- History Retention -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <dt class="text-sm font-medium text-gray-500">Plan Retention</dt>
+        <dd class="mt-2">
+            <span class="text-3xl font-semibold text-gray-900">
+                {% if limits.history_retention_days == 0 %}
+                Forever
+                {% else %}
+                {{ limits.history_retention_days }}d
+                {% endif %}
+            </span>
+        </dd>
+    </div>
+</div>
+
+<!-- Feature Availability -->
+<div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-base font-semibold text-gray-900">Feature Availability</h2>
+    </div>
+    <div class="divide-y divide-gray-200">
+        {% set features = [
+            ("Share links", limits.share_links),
+            ("Team dashboards", limits.team_dashboards),
+            ("Annotations", limits.annotations),
+            ("CI/CD basic (pass/fail)", limits.ci_basic),
+            ("PR comments", limits.ci_pr_comments),
+            ("Regression blocking", limits.ci_regression_blocking),
+            ("GitHub Actions", limits.github_actions),
+            ("Slack integration", limits.slack_integration),
+            ("Jira integration", limits.jira_integration),
+            ("PagerDuty", limits.pagerduty_integration),
+            ("SSO / SAML", limits.sso_saml),
+            ("Custom RBAC", limits.rbac_custom_roles),
+            ("Audit logs", limits.audit_logs),
+            ("Self-hosted", limits.self_hosted),
+            ("Custom rules", limits.custom_rules),
+            ("Dedicated support", limits.dedicated_support),
+        ] %}
+        {% for name, enabled in features %}
+        <div class="px-6 py-3 flex items-center justify-between">
+            <span class="text-sm text-gray-700">{{ name }}</span>
+            {% if enabled %}
+            <span class="badge-success inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">Available</span>
+            {% else %}
+            <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                <a href="/pricing" class="text-indigo-600 hover:text-indigo-500">Upgrade</a>
+            </span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Upgrade CTA -->
+{% if tier == 'community' %}
+<div class="bg-indigo-50 rounded-lg p-6 text-center">
+    <h3 class="text-lg font-semibold text-indigo-900">Ready for more?</h3>
+    <p class="mt-2 text-sm text-indigo-700">
+        Upgrade to Pro for unlimited plans, 90-day history, and API access. Just $29/month.
+    </p>
+    <a href="/pricing" class="mt-4 inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+        View Plans
+    </a>
+</div>
+{% elif tier == 'pro' %}
+<div class="bg-purple-50 rounded-lg p-6 text-center">
+    <h3 class="text-lg font-semibold text-purple-900">Need team collaboration?</h3>
+    <p class="mt-2 text-sm text-purple-700">
+        Upgrade to Team for PR comments, dashboards, Slack/Jira integration, and unlimited API calls.
+    </p>
+    <a href="/pricing" class="mt-4 inline-flex items-center rounded-md bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500">
+        View Plans
+    </a>
+</div>
+{% endif %}
+{% endblock %}

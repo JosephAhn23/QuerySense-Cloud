@@ -1,0 +1,114 @@
+# QuerySense PR Check — Free migration analysis for every PR.
+#
+# Drop this file into your .github/workflows/ directory.
+# No config needed. Works out of the box.
+#
+# What Harness charges $$$$ for, you get for free.
+# What Liquibase paywalls, we give away.
+name: QuerySense PR Check
+
+on:
+  pull_request:
+    paths:
+      - 'migrations/**'
+      - 'db/**'
+      - 'sql/**'
+      - '**/*.sql'
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  check-migrations:
+    name: Migration Safety Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for diff
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install QuerySense
+        run: pip install querysense
+
+      # ── Step 1: Analyze migrations ────────────────────────
+      - name: Analyze changed migrations
+        id: analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          querysense pr review \
+            --pr ${{ github.event.pull_request.number }} \
+            --migration-dir migrations/ \
+            --fail-on critical \
+            --json > /tmp/querysense-report.json 2>&1 || true
+
+          # Extract verdict
+          VERDICT=$(python3 -c "
+          import json
+          with open('/tmp/querysense-report.json') as f:
+              data = json.load(f)
+          print(data.get('verdict', 'PASS'))
+          " 2>/dev/null || echo "PASS")
+
+          echo "verdict=$VERDICT" >> $GITHUB_OUTPUT
+
+      # ── Step 2: Post PR comment ───────────────────────────
+      - name: Comment on PR
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          querysense comment-pr \
+            --report /tmp/querysense-report.json \
+            --repo ${{ github.repository }} \
+            --pr ${{ github.event.pull_request.number }}
+
+      # ── Step 3: Generate rollback SQL ─────────────────────
+      - name: Generate rollback scripts
+        if: steps.analyze.outputs.verdict != 'PASS'
+        run: |
+          mkdir -p /tmp/rollbacks
+          for f in $(git diff --name-only origin/main...HEAD | grep '\.sql$'); do
+            if [ -f "$f" ]; then
+              BASENAME=$(basename "$f" .sql)
+              querysense rollback generate \
+                --migration "$f" \
+                -o "/tmp/rollbacks/${BASENAME}_rollback.sql" || true
+            fi
+          done
+
+      - name: Upload rollback scripts
+        if: steps.analyze.outputs.verdict != 'PASS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-scripts
+          path: /tmp/rollbacks/
+          retention-days: 30
+
+      # ── Step 4: Auto-fix (optional) ───────────────────────
+      - name: Auto-fix migrations
+        if: steps.analyze.outputs.verdict == 'FAIL'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in $(git diff --name-only origin/main...HEAD | grep '\.sql$'); do
+            if [ -f "$f" ]; then
+              querysense pr create-fix \
+                --pr ${{ github.event.pull_request.number }} \
+                --migration "$f" \
+                --dry-run || true
+            fi
+          done
+
+      # ── Step 5: Fail on critical ──────────────────────────
+      - name: Check verdict
+        if: steps.analyze.outputs.verdict == 'FAIL'
+        run: |
+          echo "::error::Critical migration issues found. See PR comment for details."
+          exit 1

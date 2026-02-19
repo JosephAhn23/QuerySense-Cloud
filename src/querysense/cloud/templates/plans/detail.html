@@ -1,0 +1,834 @@
+{% extends "base.html" %}
+{% block title %}{{ plan.title if plan else 'Plan Not Found' }} - QuerySense Cloud{% endblock %}
+
+{% block content %}
+{% if error and not plan %}
+<div class="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+    <p class="text-sm text-red-700 dark:text-red-400">{{ error }}</p>
+</div>
+{% elif plan %}
+
+<!-- Header -->
+<div class="sm:flex sm:items-center sm:justify-between mb-6">
+    <div>
+        <div class="flex items-center gap-2 mb-1">
+            <a href="/plans" class="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">&larr; Plans</a>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ plan.title }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Uploaded {{ plan.created_at }}
+            {% for tag in plan.tags %}
+            <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-300">{{ tag }}</span>
+            {% endfor %}
+        </p>
+    </div>
+    <div class="mt-4 sm:mt-0 flex gap-2">
+        <a href="/plans/{{ plan.id }}/compare"
+           class="inline-flex items-center rounded-lg bg-white dark:bg-slate-700 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
+            <svg class="w-4 h-4 mr-1.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            Compare
+        </a>
+        <form action="/plans/{{ plan.id }}/share" method="POST" class="inline">
+            <button type="submit"
+                    class="inline-flex items-center rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition-colors">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                Share
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Share Links -->
+{% if share_links %}
+<div class="mb-6 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
+    <h3 class="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">Share Links</h3>
+    {% for sl in share_links %}
+    <div class="flex items-center gap-2 mb-1">
+        <input type="text" value="{{ request.base_url }}share/{{ sl.token }}" readonly
+               class="flex-1 rounded-md border border-blue-200 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-gray-700 dark:text-gray-300 font-mono"
+               onclick="this.select()">
+        <button onclick="copyToClipboard('{{ request.base_url }}share/{{ sl.token }}', this)" class="p-1 text-blue-600 hover:text-blue-800">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+        </button>
+        <span class="text-xs text-blue-600 dark:text-blue-400">Expires: {{ sl.expires_at }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if analysis %}
+
+<!-- Plan Insights Summary (from compute_plan_insights) -->
+{% if insights and insights.plan_summary %}
+<div class="insight-card mb-6 animate-slide-up">
+    <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 p-2 rounded-lg bg-brand-100 dark:bg-brand-900/40">
+            <svg class="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+        </div>
+        <div class="flex-1">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Plan Summary</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{{ insights.plan_summary }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6 mb-6">
+    <div class="stat-card">
+        <div class="flex items-center justify-between">
+            <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Evidence</dt>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold
+                {% if analysis.evidence_level == 'measured' %}bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400
+                {% elif analysis.evidence_level == 'informed' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400
+                {% else %}bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400{% endif %}">
+                {{ analysis.evidence_level }}
+            </span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Findings</dt>
+        <dd class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ analysis.summary.total }}</dd>
+    </div>
+    <div class="stat-card">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Critical</dt>
+        <dd class="mt-1 text-xl font-bold text-red-600">{{ analysis.summary.critical }}</dd>
+    </div>
+    <div class="stat-card">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Warnings</dt>
+        <dd class="mt-1 text-xl font-bold text-amber-600">{{ analysis.summary.warning }}</dd>
+    </div>
+    {% if insights %}
+    <div class="stat-card">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Nodes</dt>
+        <dd class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ insights.node_count }}</dd>
+    </div>
+    <div class="stat-card">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">
+            {% if insights.total_time_ms %}Time{% else %}Cost{% endif %}
+        </dt>
+        <dd class="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+            {% if insights.total_time_ms %}{{ "%.1f" | format(insights.total_time_ms) }}ms{% else %}{{ "%.0f" | format(insights.total_cost) }}{% endif %}
+        </dd>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Buffer Stats (if available) -->
+{% if insights and insights.buffer_summary and insights.buffer_summary.has_buffer_data %}
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="stat-card">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Cache Hit Rate</dt>
+        <dd class="mt-1 text-xl font-bold {% if insights.buffer_summary.cache_hit_pct >= 90 %}text-green-600{% elif insights.buffer_summary.cache_hit_pct >= 70 %}text-amber-600{% else %}text-red-600{% endif %}">
+            {{ "%.1f" | format(insights.buffer_summary.cache_hit_pct) }}%
+        </dd>
+        <div class="progress-bar mt-2">
+            <div class="progress-bar-fill {% if insights.buffer_summary.cache_hit_pct >= 90 %}bg-green-500{% elif insights.buffer_summary.cache_hit_pct >= 70 %}bg-amber-500{% else %}bg-red-500{% endif %}"
+                 style="width: {{ insights.buffer_summary.cache_hit_pct }}%"></div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Shared Hit</dt>
+        <dd class="mt-1 text-xl font-bold text-green-600">{{ "{:,}".format(insights.buffer_summary.total_shared_hit) }}</dd>
+        <p class="text-[11px] text-gray-400 mt-1">blocks from cache</p>
+    </div>
+    <div class="stat-card">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Shared Read</dt>
+        <dd class="mt-1 text-xl font-bold text-orange-600">{{ "{:,}".format(insights.buffer_summary.total_shared_read) }}</dd>
+        <p class="text-[11px] text-gray-400 mt-1">blocks from disk</p>
+    </div>
+    {% if insights.buffer_summary.has_temp_data %}
+    <div class="stat-card">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Temp I/O</dt>
+        <dd class="mt-1 text-xl font-bold text-red-600">{{ "{:,}".format(insights.buffer_summary.total_temp_read + insights.buffer_summary.total_temp_written) }}</dd>
+        <p class="text-[11px] text-gray-400 mt-1">blocks spilled</p>
+    </div>
+    {% else %}
+    <div class="stat-card">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Blocks</dt>
+        <dd class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ "{:,}".format(insights.buffer_summary.total_blocks) }}</dd>
+        <p class="text-[11px] text-gray-400 mt-1">{{ (insights.buffer_summary.total_blocks * 8 / 1024) | round(1) }}MB</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Tabs: Findings / Cost Flamegraph / Plan Tree / SQL / Rule Details -->
+<div id="planTabs" class="mb-8">
+    <div class="border-b border-gray-200 dark:border-slate-700 flex gap-1 mb-6 overflow-x-auto">
+        <button class="tab-btn active" data-tab="tab-findings">
+            Findings
+            {% if analysis.summary.total > 0 %}
+            <span class="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">{{ analysis.summary.total }}</span>
+            {% endif %}
+        </button>
+        {% if insights and insights.cost_distribution %}
+        <button class="tab-btn" data-tab="tab-flamegraph">Cost Map</button>
+        {% endif %}
+        <button class="tab-btn" data-tab="tab-plantree">Plan Tree</button>
+        <button class="tab-btn" data-tab="tab-svg">SVG Diagram</button>
+        {% if plan.sql_text %}<button class="tab-btn" data-tab="tab-sql">SQL</button>{% endif %}
+        {% if analysis.rule_runs %}<button class="tab-btn" data-tab="tab-rules">Rules ({{ analysis.rule_runs | length }})</button>{% endif %}
+    </div>
+
+    <!-- Findings Tab -->
+    <div id="tab-findings" class="tab-content active">
+        {% if analysis.findings %}
+
+        <!-- Progressive Disclosure Controls -->
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+                <button id="beginnerToggle" onclick="toggleBeginnerMode()" class="beginner-mode-toggle active" data-tooltip="Show only top issues">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Focus Mode
+                </button>
+                <button id="eli5Toggle" onclick="toggleELI5()" class="beginner-mode-toggle" data-tooltip="Show plain-English explanations">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Explain Like I'm 5
+                </button>
+                <span id="findingsCounter" class="text-xs text-gray-400 dark:text-gray-500">
+                    Showing top 3 of {{ analysis.findings|length }}
+                </span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Critical</span>
+                <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Warning</span>
+                <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Info</span>
+            </div>
+        </div>
+
+        <div id="findingsList" class="space-y-4">
+            {% for finding in analysis.findings %}
+            <div class="finding-card-item bg-white dark:bg-slate-800 shadow-sm rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 finding-card-enter {% if loop.index0 >= 3 %}finding-hidden beginner-hidden{% endif %}" style="animation-delay: {{ loop.index0 * 60 }}ms" data-severity="{{ finding.severity }}" data-index="{{ loop.index0 }}">
+                <!-- Card header with impact score -->
+                <div class="px-5 py-4 border-l-4
+                    {% if finding.severity == 'critical' %}border-red-500 bg-red-50/50 dark:bg-red-900/10{% elif finding.severity == 'warning' %}border-amber-500 bg-amber-50/50 dark:bg-amber-900/10{% else %}border-blue-500 bg-blue-50/50 dark:bg-blue-900/10{% endif %}">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center flex-wrap gap-2">
+                                {% if finding.severity == 'critical' %}
+                                <span class="badge-critical inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold">CRITICAL</span>
+                                {% elif finding.severity == 'warning' %}
+                                <span class="badge-warning inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold">WARNING</span>
+                                {% else %}
+                                <span class="badge-info inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold">INFO</span>
+                                {% endif %}
+                                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ finding.title }}</h3>
+                            </div>
+                            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                                <code class="bg-white/50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded font-mono">{{ finding.rule_id }}</code>
+                                {% if finding.context.relation_name %}
+                                &middot; <code class="bg-white/50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded font-mono">{{ finding.context.relation_name }}</code>
+                                {% endif %}
+                                {% if finding.impact_band and finding.impact_band != 'UNKNOWN' %}
+                                &middot; <span class="font-medium">{{ finding.impact_band }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <!-- Prominent Impact Score -->
+                        {% if finding.impact_score is defined and finding.impact_score > 0 %}
+                        <div class="finding-impact-score flex-shrink-0
+                            {% if finding.impact_score >= 7 %}impact-high{% elif finding.impact_score >= 4 %}impact-medium{% else %}impact-low{% endif %}"
+                             data-tooltip="Impact severity score">
+                            {{ "%.1f" | format(finding.impact_score) }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="px-5 py-4">
+                    <!-- Description -->
+                    <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">{{ finding.description }}</p>
+
+                    <!-- ELI5 Human Explanation (hidden by default, toggled with button) -->
+                    {% if eli5 and eli5[loop.index0|string] %}
+                    <div class="eli5-panel hidden mt-4 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800/50 p-4 space-y-3" data-eli5-index="{{ loop.index0 }}">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-lg">💡</span>
+                            <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">Plain English Explanation</span>
+                            <span class="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold
+                                {% if eli5[loop.index0|string].difficulty == 'easy' %}bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400
+                                {% elif eli5[loop.index0|string].difficulty == 'medium' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400
+                                {% else %}bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400{% endif %}">
+                                {{ eli5[loop.index0|string].difficulty }} fix · {{ eli5[loop.index0|string].time_to_fix }}
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            <div>
+                                <p class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">🔍 What happened</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">{{ eli5[loop.index0|string].what_happened }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">💥 Why it matters</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">{{ eli5[loop.index0|string].why_it_matters }}</p>
+                            </div>
+                            {% if eli5[loop.index0|string].analogy %}
+                            <div class="flex items-start gap-2 bg-white/60 dark:bg-slate-800/40 rounded-lg px-3 py-2">
+                                <span class="text-base">📖</span>
+                                <p class="text-sm italic text-gray-600 dark:text-gray-400">{{ eli5[loop.index0|string].analogy }}</p>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <p class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">🛠️ How to fix</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">{{ eli5[loop.index0|string].how_to_fix }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">📈 Expected result</p>
+                                <p class="text-sm font-medium text-green-700 dark:text-green-300">{{ eli5[loop.index0|string].estimated_impact }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Speedup estimate -->
+                    {% if finding.metrics and finding.metrics.estimated_speedup %}
+                    <div class="mt-3">
+                        <span class="speedup-badge">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            Fix makes queries {{ finding.metrics.estimated_speedup }} faster
+                        </span>
+                    </div>
+                    {% endif %}
+
+                    <!-- Fix with one-click copy -->
+                    {% if finding.suggestion %}
+                    <div class="mt-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Fix</h4>
+                            <button onclick="copyToClipboard(this.closest('.mt-4').querySelector('.code-block').innerText.trim(), this)" class="copy-fix-btn">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                Copy Fix
+                            </button>
+                        </div>
+                        <div class="code-block text-sm">{{ finding.suggestion }}</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Metrics grid -->
+                    {% if finding.metrics %}
+                    <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 finding-metrics-grid">
+                        {% for key, value in finding.metrics.items() %}
+                        {% if key != 'estimated_speedup' %}
+                        <div class="px-3 py-2 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+                            <dt class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">{{ key | replace('_', ' ') }}</dt>
+                            <dd class="text-sm font-semibold text-gray-900 dark:text-white mt-0.5">
+                                {% if value is number and value > 1000 %}{{ "{:,.0f}".format(value) }}{% elif value is number %}{{ "%.1f" | format(value) }}{% else %}{{ value }}{% endif %}
+                            </dd>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Progressive disclosure: details -->
+                    {% if finding.assumptions or finding.verification_steps %}
+                    <details class="mt-4 group">
+                        <summary class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center gap-1">
+                            <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            Why this happens & how to verify
+                        </summary>
+                        <div class="mt-3 space-y-3 pl-4 border-l-2 border-gray-200 dark:border-slate-600">
+                            {% if finding.assumptions %}
+                            <div>
+                                <p class="text-[10px] font-semibold text-gray-400 uppercase mb-1">Assumptions</p>
+                                <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                    {% for assumption in finding.assumptions %}
+                                    <li>{{ assumption }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                            {% if finding.verification_steps %}
+                            <div>
+                                <p class="text-[10px] font-semibold text-gray-400 uppercase mb-1">Verification Checklist</p>
+                                <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
+                                    {% for step in finding.verification_steps %}
+                                    <li class="flex items-start">
+                                        <input type="checkbox" class="mt-0.5 mr-2 rounded border-gray-300 dark:border-slate-600 text-brand-600" onchange="saveCheckState(this, '{{ plan.id }}', '{{ finding.rule_id }}', {{ loop.index0 }})">
+                                        <span>{{ step }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </details>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Show more button (visible in beginner mode when findings are hidden) -->
+        {% if analysis.findings|length > 3 %}
+        <button id="showMoreFindings" class="show-more-findings mt-4" onclick="showAllFindings()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            Show {{ analysis.findings|length - 3 }} more finding{{ 's' if analysis.findings|length - 3 > 1 else '' }}
+        </button>
+        {% endif %}
+
+        {% else %}
+        <div class="rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-8 text-center">
+            <svg class="mx-auto h-10 w-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <h3 class="mt-3 text-sm font-semibold text-green-800 dark:text-green-300">No issues found</h3>
+            <p class="mt-1 text-sm text-green-600 dark:text-green-400">This query plan looks healthy.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Cost Flamegraph Tab -->
+    {% if insights and insights.cost_distribution %}
+    <div id="tab-flamegraph" class="tab-content">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Cost Distribution</h3>
+                <span class="text-xs text-gray-400 dark:text-gray-500">Exclusive cost per node (excludes children)</span>
+            </div>
+
+            <!-- Flamegraph-style bars -->
+            <div class="space-y-2">
+                {% for node in insights.cost_distribution %}
+                {% if node.cost_pct >= 1 %}
+                <div class="flex items-center gap-3 group">
+                    <div class="w-28 flex-shrink-0 text-right">
+                        <span class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ "%.1f" | format(node.cost_pct) }}%</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flame-bar
+                            {% if node.cost_pct >= 50 %}bg-red-500 text-white
+                            {% elif node.cost_pct >= 25 %}bg-orange-400 text-white
+                            {% elif node.cost_pct >= 10 %}bg-amber-400 text-amber-900
+                            {% else %}bg-blue-300 text-blue-900{% endif %}"
+                             style="width: {{ [node.cost_pct, 5] | max }}%">
+                            <span class="flame-label">{{ node.node_type }}{% if node.relation %} ({{ node.relation }}){% endif %}</span>
+                        </div>
+                    </div>
+                    <div class="w-20 flex-shrink-0 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span class="text-[11px] text-gray-400">cost: {{ "%.0f" | format(node.exclusive_cost) }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- Time Distribution (if available) -->
+            {% if insights.time_distribution %}
+            <div class="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Time Distribution</h3>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">Actual execution time per node</span>
+                </div>
+                <div class="space-y-2">
+                    {% for node in insights.time_distribution %}
+                    {% if node.time_pct is defined and node.time_pct >= 1 %}
+                    <div class="flex items-center gap-3 group">
+                        <div class="w-28 flex-shrink-0 text-right">
+                            <span class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ "%.1f" | format(node.time_pct) }}%</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flame-bar
+                                {% if node.time_pct >= 50 %}bg-purple-500 text-white
+                                {% elif node.time_pct >= 25 %}bg-purple-400 text-white
+                                {% elif node.time_pct >= 10 %}bg-purple-300 text-purple-900
+                                {% else %}bg-purple-200 text-purple-800{% endif %}"
+                                 style="width: {{ [node.time_pct, 5] | max }}%">
+                                <span class="flame-label">{{ node.node_type }}{% if node.relation %} ({{ node.relation }}){% endif %}</span>
+                            </div>
+                        </div>
+                        <div class="w-24 flex-shrink-0 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span class="text-[11px] text-gray-400">{{ "%.1f" | format(node.exclusive_time_ms) }}ms</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Cost breakdown chart -->
+            <div class="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Cost Breakdown</h3>
+                </div>
+                <div class="h-48">
+                    <canvas id="costBreakdownChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Plan Tree Tab -->
+    <div id="tab-plantree" class="tab-content">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Visual Plan Tree</h3>
+                <span class="text-xs text-gray-400 dark:text-gray-500">Hover for details. Cost bars show relative weight.</span>
+            </div>
+            <div id="planTreeContainer" class="overflow-x-auto styled-scrollbar"></div>
+        </div>
+    </div>
+
+    <!-- SVG Diagram Tab -->
+    <div id="tab-svg" class="tab-content">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Plan Diagram</h3>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400 dark:text-gray-500">Clean SVG visualization of query execution flow</span>
+                    <button onclick="downloadSVG()" class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 rounded hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Download SVG
+                    </button>
+                </div>
+            </div>
+            <div id="svgPlanContainer" class="overflow-x-auto styled-scrollbar"
+                 hx-get="/api/plans/{{ plan.id }}/svg"
+                 hx-trigger="intersect once"
+                 hx-swap="innerHTML">
+                <div class="flex items-center justify-center py-12 text-gray-400 dark:text-gray-500">
+                    <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    Loading diagram...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SQL Tab -->
+    {% if plan.sql_text %}
+    <div id="tab-sql" class="tab-content">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">SQL Query</h3>
+                <button onclick="copyToClipboard(document.getElementById('sqlContent').innerText, this)" class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 rounded hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    Copy
+                </button>
+            </div>
+            <div class="p-5">
+                <pre class="code-block text-sm" id="sqlContent">{{ plan.sql_text }}</pre>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Rule Details Tab -->
+    {% if analysis.rule_runs %}
+    <div id="tab-rules" class="tab-content">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                <thead class="bg-gray-50 dark:bg-slate-900/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase">Rule</th>
+                        <th class="px-4 py-3 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                        <th class="px-4 py-3 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase">Runtime</th>
+                        <th class="px-4 py-3 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase">Findings</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                    {% for run in analysis.rule_runs %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                        <td class="px-4 py-2.5 text-xs font-mono text-gray-700 dark:text-gray-300">{{ run.rule_id }}</td>
+                        <td class="px-4 py-2.5 text-xs">
+                            {% if run.status == 'pass' %}
+                            <span class="badge-success inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold">pass</span>
+                            {% elif run.status == 'skip' %}
+                            <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-400">skip</span>
+                            {% else %}
+                            <span class="badge-critical inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold">fail</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{{ "%.1f" | format(run.runtime_ms) }}ms</td>
+                        <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{{ run.findings_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% else %}
+<div class="text-center py-12 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+    <p class="text-sm text-gray-500 dark:text-gray-400">No analysis available for this plan.</p>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if plan and analysis %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initTabs('planTabs');
+
+    // Parse and render plan tree
+    try {
+        const planJson = {{ plan.plan_json | safe }};
+        const planData = Array.isArray(planJson) ? planJson[0] : planJson;
+        const root = planData.Plan || planData;
+        const totalCost = root['Total Cost'] || 1;
+        const container = document.getElementById('planTreeContainer');
+        if (container && root) {
+            container.innerHTML = renderPlanNode(root, true, totalCost);
+        }
+    } catch(e) {
+        const container = document.getElementById('planTreeContainer');
+        if (container) {
+            container.innerHTML = '<p class="text-sm text-gray-500">Unable to render plan tree.</p>';
+        }
+    }
+
+    // Cost breakdown chart
+    {% if insights and insights.cost_distribution %}
+    const costCtx = document.getElementById('costBreakdownChart');
+    if (costCtx) {
+        const costData = {{ insights.cost_distribution | tojson }};
+        const topNodes = costData.filter(n => n.cost_pct >= 1).slice(0, 8);
+        const otherPct = 100 - topNodes.reduce((s, n) => s + n.cost_pct, 0);
+
+        const labels = topNodes.map(n => n.node_type + (n.relation ? ` (${n.relation})` : ''));
+        const data = topNodes.map(n => n.cost_pct);
+        if (otherPct > 0.5) { labels.push('Other'); data.push(Math.round(otherPct * 10) / 10); }
+
+        const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280', '#94a3b8'];
+
+        new Chart(costCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{ data: data, backgroundColor: colors.slice(0, data.length), borderWidth: 2, borderColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#fff' }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true, font: { size: 11, family: 'Inter' }, color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#6b7280' } },
+                    tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed}%` } }
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+
+function getNodeBadgeClass(nodeType) {
+    const nt = (nodeType || '').toLowerCase();
+    if (nt.includes('seq scan')) return 'seq-scan';
+    if (nt.includes('index')) return 'index-scan';
+    if (nt.includes('hash')) return 'hash-join';
+    if (nt.includes('nested')) return 'nested-loop';
+    if (nt.includes('sort') || nt.includes('merge')) return 'sort';
+    return 'default';
+}
+
+function formatNumber(n) {
+    if (n == null) return '-';
+    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+    return n.toLocaleString();
+}
+
+function getCostColor(pct) {
+    if (pct >= 50) return 'bg-red-500';
+    if (pct >= 25) return 'bg-orange-400';
+    if (pct >= 10) return 'bg-amber-400';
+    return 'bg-blue-300';
+}
+
+function renderPlanNode(node, isRoot, totalCost) {
+    const nodeType = node['Node Type'] || 'Unknown';
+    const badgeClass = getNodeBadgeClass(nodeType);
+    const relation = node['Relation Name'] || node['Index Name'] || '';
+    const rows = node['Actual Rows'] != null ? node['Actual Rows'] : node['Plan Rows'];
+    const cost = node['Total Cost'] != null ? node['Total Cost'] : null;
+    const time = node['Actual Total Time'] != null ? node['Actual Total Time'] : null;
+    const loops = node['Actual Loops'] || 1;
+    const planRows = node['Plan Rows'];
+    const actualRows = node['Actual Rows'];
+
+    // Exclusive cost
+    const children = node['Plans'] || [];
+    const childrenCost = children.reduce((s, c) => s + (c['Total Cost'] || 0), 0);
+    const exclusiveCost = Math.max(0, (cost || 0) - childrenCost);
+    const costPct = totalCost > 0 ? (exclusiveCost / totalCost * 100) : 0;
+
+    // Row estimate accuracy
+    let estimateHtml = '';
+    if (planRows != null && actualRows != null && planRows > 0) {
+        const ratio = actualRows / planRows;
+        if (ratio > 10 || ratio < 0.1) {
+            const label = ratio > 1 ? ratio.toFixed(0) + 'x over' : (1/ratio).toFixed(0) + 'x under';
+            estimateHtml = `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 ml-2">est ${label}</span>`;
+        }
+    }
+
+    let html = `<div class="plan-node ${isRoot ? 'plan-node-root' : ''} py-1.5">`;
+    html += `<div class="flex items-center gap-2 py-1.5 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors group cursor-default">`;
+    html += `<span class="plan-node-badge ${badgeClass}">${nodeType}</span>`;
+
+    if (relation) {
+        html += `<span class="text-xs text-gray-500 dark:text-gray-400 font-mono">${relation}</span>`;
+    }
+
+    html += estimateHtml;
+
+    // Inline cost bar
+    if (costPct >= 1) {
+        html += `<div class="ml-2 w-16 h-1.5 rounded-full bg-gray-200 dark:bg-slate-600 overflow-hidden" title="${costPct.toFixed(1)}% of cost">`;
+        html += `<div class="${getCostColor(costPct)} h-full rounded-full" style="width:${Math.min(costPct, 100)}%"></div>`;
+        html += `</div>`;
+        html += `<span class="text-[10px] font-medium ${costPct >= 25 ? 'text-red-600' : 'text-gray-400'}">${costPct.toFixed(0)}%</span>`;
+    }
+
+    // Details on hover
+    html += `<div class="ml-auto flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">`;
+    if (rows != null) html += `<span>Rows: <strong class="text-gray-600 dark:text-gray-300">${formatNumber(rows)}</strong></span>`;
+    if (time != null) html += `<span>Time: <strong class="text-gray-600 dark:text-gray-300">${time.toFixed(2)}ms</strong></span>`;
+    if (loops > 1) html += `<span>Loops: <strong class="text-gray-600 dark:text-gray-300">${formatNumber(loops)}</strong></span>`;
+    html += `</div>`;
+    html += `</div>`;
+
+    for (const child of children) {
+        html += renderPlanNode(child, false, totalCost);
+    }
+
+    html += `</div>`;
+    return html;
+}
+
+function downloadSVG() {
+    const container = document.getElementById('svgPlanContainer');
+    const svg = container.querySelector('svg');
+    if (!svg) return;
+    const blob = new Blob([svg.outerHTML], {type: 'image/svg+xml'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plan-{{ plan.id }}.svg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// ── ELI5 Mode (Explain Like I'm 5) ──────────────────────────────
+let eli5Mode = JSON.parse(localStorage.getItem('querysense.eli5Mode') ?? 'false');
+
+function toggleELI5() {
+    eli5Mode = !eli5Mode;
+    localStorage.setItem('querysense.eli5Mode', JSON.stringify(eli5Mode));
+    applyELI5Mode();
+}
+
+function applyELI5Mode() {
+    const toggle = document.getElementById('eli5Toggle');
+    if (toggle) toggle.classList.toggle('active', eli5Mode);
+
+    document.querySelectorAll('.eli5-panel').forEach(panel => {
+        if (eli5Mode) {
+            panel.classList.remove('hidden');
+            panel.style.animation = 'slideUp 0.3s ease-out';
+        } else {
+            panel.classList.add('hidden');
+        }
+    });
+}
+
+// Apply on load
+applyELI5Mode();
+
+// ── Progressive Disclosure (Beginner Mode) ──────────────────────
+let beginnerMode = JSON.parse(localStorage.getItem('querysense.beginnerMode') ?? 'true');
+
+function toggleBeginnerMode() {
+    beginnerMode = !beginnerMode;
+    localStorage.setItem('querysense.beginnerMode', JSON.stringify(beginnerMode));
+    applyBeginnerMode();
+}
+
+function applyBeginnerMode() {
+    const toggle = document.getElementById('beginnerToggle');
+    const counter = document.getElementById('findingsCounter');
+    const showMore = document.getElementById('showMoreFindings');
+    const items = document.querySelectorAll('.finding-card-item');
+    const totalFindings = items.length;
+
+    if (toggle) {
+        toggle.classList.toggle('active', beginnerMode);
+    }
+
+    items.forEach(item => {
+        const idx = parseInt(item.dataset.index);
+        if (beginnerMode && idx >= 3) {
+            item.classList.add('finding-hidden', 'beginner-hidden');
+        } else {
+            item.classList.remove('finding-hidden', 'beginner-hidden');
+        }
+    });
+
+    if (counter) {
+        if (beginnerMode && totalFindings > 3) {
+            counter.textContent = `Showing top 3 of ${totalFindings}`;
+        } else {
+            counter.textContent = `Showing all ${totalFindings}`;
+        }
+    }
+
+    if (showMore) {
+        showMore.style.display = beginnerMode && totalFindings > 3 ? 'flex' : 'none';
+    }
+}
+
+function showAllFindings() {
+    beginnerMode = false;
+    localStorage.setItem('querysense.beginnerMode', 'false');
+    applyBeginnerMode();
+}
+
+// Apply on load
+applyBeginnerMode();
+
+// ── Persistent Verification Checkboxes ──────────────────────────
+function saveCheckState(checkbox, planId, ruleId, stepIdx) {
+    const key = `querysense.checks.${planId}.${ruleId}.${stepIdx}`;
+    localStorage.setItem(key, JSON.stringify(checkbox.checked));
+}
+
+function restoreCheckStates() {
+    document.querySelectorAll('input[type="checkbox"][onchange^="saveCheckState"]').forEach(cb => {
+        const match = cb.getAttribute('onchange').match(/'([^']+)',\s*'([^']+)',\s*(\d+)/);
+        if (match) {
+            const key = `querysense.checks.${match[1]}.${match[2]}.${match[3]}`;
+            const saved = localStorage.getItem(key);
+            if (saved !== null) cb.checked = JSON.parse(saved);
+        }
+    });
+}
+restoreCheckStates();
+
+// ── Persistent Tab State ────────────────────────────────────────
+(function() {
+    const savedTab = localStorage.getItem('querysense.planDetailTab');
+    if (savedTab) {
+        const tabBtn = document.querySelector(`[data-tab="${savedTab}"]`);
+        if (tabBtn) tabBtn.click();
+    }
+
+    document.querySelectorAll('#planTabs .tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            localStorage.setItem('querysense.planDetailTab', btn.dataset.tab);
+        });
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

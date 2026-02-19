@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Migration Safety — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
+                <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Migration Safety Check</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Risk analysis + intelligent rollback — free forever
+                    <span class="ml-2 inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-300">
+                        Beats Liquibase Pro
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Input Panel -->
+        <div>
+            <form id="migration-form" hx-post="/migrations/check" hx-target="#migration-result" hx-indicator="#migration-spinner">
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-4">
+                    <label class="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                        Migration SQL
+                    </label>
+                    <textarea name="sql" id="sql-input" rows="14" required
+                        class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-gray-100 font-mono text-sm focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="ALTER TABLE orders ADD COLUMN status TEXT NOT NULL;
+CREATE INDEX idx_orders_status ON orders(status);
+ALTER TABLE orders ADD CONSTRAINT fk_customer FOREIGN KEY (customer_id) REFERENCES customers(id);">{{ request.query_params.get('sql', '') }}</textarea>
+                </div>
+
+                <div class="flex items-center gap-4 mb-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="generate_rollback" value="true" checked
+                            class="rounded border-gray-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Generate rollback SQL</span>
+                    </label>
+                </div>
+
+                <button type="submit"
+                    class="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                    Check Migration Safety
+                </button>
+
+                <!-- Spinner -->
+                <div id="migration-spinner" class="htmx-indicator flex justify-center py-4">
+                    <div class="animate-spin h-6 w-6 border-2 border-red-500 border-t-transparent rounded-full"></div>
+                </div>
+            </form>
+
+            <!-- Risk categories -->
+            <div class="mt-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Safety Rules (9 checks)</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 font-medium text-red-800 dark:text-red-300">CRIT</span>
+                        <span class="text-gray-600 dark:text-gray-400">ADD COLUMN NOT NULL without DEFAULT</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 font-medium text-red-800 dark:text-red-300">CRIT</span>
+                        <span class="text-gray-600 dark:text-gray-400">DROP TABLE without backup plan</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 font-medium text-yellow-800 dark:text-yellow-300">WARN</span>
+                        <span class="text-gray-600 dark:text-gray-400">CREATE INDEX without CONCURRENTLY</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 font-medium text-yellow-800 dark:text-yellow-300">WARN</span>
+                        <span class="text-gray-600 dark:text-gray-400">FOREIGN KEY validates all rows</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 font-medium text-yellow-800 dark:text-yellow-300">WARN</span>
+                        <span class="text-gray-600 dark:text-gray-400">DROP COLUMN, ALTER TYPE, RENAME</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 font-medium text-blue-800 dark:text-blue-300">INFO</span>
+                        <span class="text-gray-600 dark:text-gray-400">Missing lock_timeout, CHECK validates</span>
+                    </div>
+                </div>
+
+                <!-- CLI usage -->
+                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">CLI Usage</p>
+                    <code class="block text-xs bg-gray-100 dark:bg-slate-900 rounded p-2 text-gray-700 dark:text-gray-300">
+                        querysense migrate-check --file migration.sql --rollback
+                    </code>
+                    <code class="block text-xs bg-gray-100 dark:bg-slate-900 rounded p-2 mt-1 text-gray-700 dark:text-gray-300">
+                        querysense rollback generate --migration migration.sql
+                    </code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Panel -->
+        <div id="migration-result">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+                <div class="text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                        Paste your migration SQL and click "Check Migration Safety"
+                    </p>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                        Supports DDL statements: CREATE/ALTER/DROP TABLE, INDEX, VIEW, CONSTRAINT
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

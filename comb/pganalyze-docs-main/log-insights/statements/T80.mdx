@@ -1,0 +1,35 @@
+---
+work_in_progress: true
+log_classification: T80
+log_title: Slow query
+log_category: statements
+collector_key: STATEMENT_DURATION
+tooltip: Query execution took longer than log_min_duration_statement
+urgency: low
+sqlstate: n/a
+color: "#FF7F50"
+---
+
+**Example Postgres Log Output:**
+
+```
+LOG: duration: 3205.800 ms execute a2: SELECT "servers".* FROM "servers" WHERE "servers"."id" = 1 LIMIT 2
+```
+
+```
+LOG: duration: 4079.697 ms execute <unnamed>:
+SELECT * FROM x WHERE y = $1 LIMIT $2
+DETAIL: parameters: $1 = 'long string', $2 = '1'
+```
+
+**Explanation:**
+
+...
+
+**Recommended Action:**
+
+...
+
+**Learn More:**
+
+No additional resources available.

@@ -1,0 +1,232 @@
+# =============================================================================
+# QuerySense GitLab CI/CD Integration Template
+# =============================================================================
+#
+# Copy this file to your project and customize for your environment.
+#
+# Features:
+#   - Query plan analysis on merge requests
+#   - Migration safety checks (pre-deploy gate)
+#   - Schema drift detection between environments
+#   - Performance regression detection via profiles
+#   - Infrastructure health checks
+#
+# Requirements:
+#   - Python 3.10+ runner
+#   - PostgreSQL access from CI (for schema/infra commands)
+#   - QUERYSENSE_DSN variable set in GitLab CI/CD Settings
+#
+# Usage:
+#   include:
+#     - local: '.gitlab-ci-querysense.yml'
+#
+# =============================================================================
+
+stages:
+  - analyze
+  - safety
+  - deploy
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  QUERYSENSE_DB_PATH: "$CI_PROJECT_DIR/.querysense"
+
+# --- Base template for all QuerySense jobs ---
+.querysense-base:
+  image: python:3.12-slim
+  before_script:
+    - pip install -q querysense[db]
+  cache:
+    paths:
+      - .cache/pip
+      - .querysense/
+
+# =============================================================================
+# Stage 1: Analyze (runs on every MR)
+# =============================================================================
+
+# Analyze EXPLAIN plans and gate on regressions
+querysense:analyze-plans:
+  extends: .querysense-base
+  stage: analyze
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - echo "Analyzing query plans..."
+    - |
+      EXIT_CODE=0
+      for plan in plans/**/*.json; do
+        if [ -f "$plan" ]; then
+          echo "--- Analyzing $plan ---"
+          querysense analyze "$plan" --ascii || EXIT_CODE=1
+        fi
+      done
+      exit $EXIT_CODE
+  artifacts:
+    when: always
+    reports:
+      junit: querysense-results.xml
+    paths:
+      - querysense-report.html
+    expire_in: 30 days
+  allow_failure: false
+
+# Check performance profiles for regressions
+querysense:profile-check:
+  extends: .querysense-base
+  stage: analyze
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $QUERYSENSE_PROFILE_NAME
+  script:
+    - echo "Checking against profile ${QUERYSENSE_PROFILE_NAME:-production}..."
+    - |
+      PROFILE="${QUERYSENSE_PROFILE_NAME:-production}"
+      for plan in plans/**/*.json; do
+        if [ -f "$plan" ]; then
+          QUERY_ID=$(basename "$plan" .json)
+          querysense check "$plan" \
+            --profile "$PROFILE" \
+            --query-id "$QUERY_ID" \
+            --fail-on-regression \
+            --json || exit 1
+        fi
+      done
+  allow_failure: true
+
+# Generate DOT graph visualizations
+querysense:graph:
+  extends: .querysense-base
+  stage: analyze
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  before_script:
+    - pip install -q querysense[db]
+    - apt-get update -qq && apt-get install -yqq graphviz
+  script:
+    - mkdir -p graphs
+    - |
+      for plan in plans/**/*.json; do
+        if [ -f "$plan" ]; then
+          NAME=$(basename "$plan" .json)
+          querysense graph "$plan" -o "graphs/${NAME}.svg" --annotate || true
+        fi
+      done
+  artifacts:
+    paths:
+      - graphs/
+    expire_in: 7 days
+
+# =============================================================================
+# Stage 2: Safety (pre-deploy checks)
+# =============================================================================
+
+# Migration safety analysis
+querysense:migration-safety:
+  extends: .querysense-base
+  stage: safety
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "migrations/**/*"
+        - "db/migrate/**/*"
+        - "alembic/**/*"
+        - "flyway/**/*"
+  script:
+    - echo "Checking migration safety..."
+    - |
+      EXIT_CODE=0
+      for migration in migrations/**/*.sql db/migrate/**/*.sql alembic/**/*.sql flyway/**/*.sql; do
+        if [ -f "$migration" ]; then
+          echo "--- Checking $migration ---"
+          querysense migrate-check --file "$migration" --fail-on-critical || EXIT_CODE=1
+          # Generate rollback
+          querysense migrate-check --file "$migration" --rollback \
+            -o "rollback_$(basename $migration)" || true
+        fi
+      done
+      exit $EXIT_CODE
+  artifacts:
+    paths:
+      - rollback_*.sql
+    expire_in: 30 days
+  allow_failure: false
+
+# Schema drift detection (requires DB access)
+querysense:schema-drift:
+  extends: .querysense-base
+  stage: safety
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $QUERYSENSE_SCHEMA_CHECK == "true"
+  script:
+    - echo "Checking schema drift..."
+    - |
+      # Capture current schema
+      querysense schema snapshot \
+        --dsn "$QUERYSENSE_DSN" \
+        -o current_schema.json
+
+      # Compare against baseline if exists
+      if [ -f ".querysense/schema_baseline.json" ]; then
+        querysense schema compare \
+          --source .querysense/schema_baseline.json \
+          --target current_schema.json \
+          --fix
+      else
+        echo "No baseline found. Saving current as baseline."
+        cp current_schema.json .querysense/schema_baseline.json
+      fi
+  artifacts:
+    paths:
+      - current_schema.json
+    expire_in: 7 days
+  allow_failure: true
+
+# Infrastructure health check
+querysense:infra-health:
+  extends: .querysense-base
+  stage: safety
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $QUERYSENSE_INFRA_CHECK == "true"
+  script:
+    - querysense infra --dsn "$QUERYSENSE_DSN" --json -o infra_metrics.json
+    - querysense infra --dsn "$QUERYSENSE_DSN" --prometheus -o metrics.prom
+  artifacts:
+    paths:
+      - infra_metrics.json
+      - metrics.prom
+    expire_in: 7 days
+  allow_failure: true
+
+# =============================================================================
+# Utility: Update baseline on main branch merge
+# =============================================================================
+
+querysense:update-baseline:
+  extends: .querysense-base
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - echo "Updating performance baselines..."
+    - |
+      for plan in plans/**/*.json; do
+        if [ -f "$plan" ]; then
+          QUERY_ID=$(basename "$plan" .json)
+          querysense history track "$plan" \
+            --db production \
+            --query-id "$QUERY_ID"
+        fi
+      done
+    # Update schema baseline
+    - |
+      if [ -n "$QUERYSENSE_DSN" ]; then
+        querysense schema snapshot --dsn "$QUERYSENSE_DSN" \
+          -o .querysense/schema_baseline.json
+      fi
+  artifacts:
+    paths:
+      - .querysense/
+    expire_in: never

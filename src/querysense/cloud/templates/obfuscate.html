@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}PII Obfuscation — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">PII Obfuscation</h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 uppercase tracking-wider">New</span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+            Mask PII (email, SSN, credit cards, phone, IP) in EXPLAIN plans and SQL queries.
+            Uses deterministic hashing for correlation without exposing raw data.
+        </p>
+    </div>
+
+    <!-- Input Form -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+        <form hx-post="/obfuscate/run" hx-target="#obf-results" hx-indicator="#obf-spinner">
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mode</label>
+                    <select name="mode" class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100">
+                        <option value="query">SQL Query</option>
+                        <option value="plan">EXPLAIN Plan (JSON)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Salt (optional, for deterministic hashing)</label>
+                    <input name="salt" type="text" placeholder="my-secret-salt"
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100">
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Text to obfuscate</label>
+                <textarea name="text" rows="8" required
+                    class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100"
+                    placeholder="SELECT * FROM users WHERE email = 'john@example.com' AND ssn = '123-45-6789'"></textarea>
+            </div>
+            <div class="flex items-center gap-3">
+                <button type="submit"
+                    class="inline-flex items-center px-5 py-2.5 rounded-lg bg-brand-600 text-white font-medium text-sm hover:bg-brand-700 transition-colors shadow-sm">
+                    Obfuscate
+                </button>
+                <span id="obf-spinner" class="htmx-indicator text-sm text-gray-500">Processing...</span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div id="obf-results"></div>
+
+    <!-- Patterns -->
+    <details class="mt-6">
+        <summary class="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-brand-600">
+            Built-in PII patterns
+        </summary>
+        <div class="mt-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 text-sm text-gray-600 dark:text-gray-300">
+            <ul class="space-y-1">
+                <li><strong>email</strong> — user@example.com</li>
+                <li><strong>credit_card</strong> — 4111-1111-1111-1111</li>
+                <li><strong>ssn</strong> — 123-45-6789</li>
+                <li><strong>phone_us</strong> — (555) 123-4567</li>
+                <li><strong>ipv4</strong> — 192.168.1.1</li>
+                <li><strong>ipv6</strong> — fe80:0000:...</li>
+                <li><strong>uuid</strong> — 12345678-1234-...</li>
+            </ul>
+        </div>
+    </details>
+</div>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Plan Library - QuerySense Cloud{% endblock %}
+
+{% block content %}
+<div class="sm:flex sm:items-center sm:justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Plan Library</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ total }} plan{{ 's' if total != 1 else '' }} in your workspace</p>
+    </div>
+    <div class="mt-4 sm:mt-0">
+        <a href="/plans/upload" class="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-all hover:-translate-y-0.5">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Upload Plan
+        </a>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="mb-6">
+    <form method="GET" action="/plans" class="flex gap-2">
+        <input type="text" name="search" value="{{ search }}" placeholder="Search plans by title..."
+               class="block w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-brand-500 sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500">
+        <button type="submit" class="rounded-lg bg-white dark:bg-slate-700 px-4 py-2 text-sm font-semibold text-gray-900 dark:text-gray-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600">
+            Search
+        </button>
+        {% if search %}
+        <a href="/plans" class="rounded-lg bg-white dark:bg-slate-700 px-4 py-2 text-sm font-semibold text-gray-500 dark:text-gray-400 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600">
+            Clear
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Plans Table -->
+{% if plans %}
+<div class="overflow-hidden bg-white dark:bg-slate-800 shadow-sm ring-1 ring-gray-200 dark:ring-slate-700 rounded-xl">
+    <table id="plansTable" class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+        <thead class="bg-gray-50 dark:bg-slate-900/50">
+            <tr>
+                <th data-sort="title" class="py-3.5 pl-4 pr-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider sm:pl-6 cursor-pointer hover:text-brand-600 transition-colors">
+                    Title
+                    <svg class="inline w-3 h-3 ml-0.5 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+                </th>
+                <th data-sort="findings" class="px-3 py-3.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-brand-600 transition-colors">
+                    Findings
+                    <svg class="inline w-3 h-3 ml-0.5 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+                </th>
+                <th class="px-3 py-3.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tags</th>
+                <th data-sort="created" class="px-3 py-3.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-brand-600 transition-colors">
+                    Created
+                    <svg class="inline w-3 h-3 ml-0.5 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+                </th>
+                <th class="relative py-3.5 pl-3 pr-4 sm:pr-6"><span class="sr-only">Actions</span></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+            {% for plan in plans %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
+                    <a href="/plans/{{ plan.id }}" class="font-medium text-brand-600 dark:text-brand-400 hover:text-brand-500">
+                        {{ plan.title }}
+                    </a>
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm">
+                    {% if plan.critical_count > 0 %}
+                    <span class="badge-critical inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold">
+                        {{ plan.critical_count }} critical
+                    </span>
+                    {% endif %}
+                    {% if plan.warning_count > 0 %}
+                    <span class="badge-warning inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ml-1">
+                        {{ plan.warning_count }} warning
+                    </span>
+                    {% endif %}
+                    {% if plan.info_count is defined and plan.info_count > 0 %}
+                    <span class="badge-info inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ml-1">
+                        {{ plan.info_count }} info
+                    </span>
+                    {% endif %}
+                    {% if plan.findings_count == 0 %}
+                    <span class="badge-success inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold">
+                        Clean
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {% for tag in plan.tags[:3] %}
+                    <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-slate-700 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">{{ tag }}</span>
+                    {% endfor %}
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{{ plan.created_at }}</td>
+                <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                    <a href="/plans/{{ plan.id }}/compare" class="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mr-3 transition-colors" title="Compare">
+                        <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </a>
+                    <a href="/plans/{{ plan.id }}" class="text-brand-600 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300 transition-colors">View &rarr;</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav class="flex items-center justify-between bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 px-4 py-3 sm:px-6 mt-4 rounded-xl shadow-sm" aria-label="Pagination">
+    <div class="hidden sm:block">
+        <p class="text-sm text-gray-700 dark:text-gray-400">
+            Page <span class="font-medium text-gray-900 dark:text-white">{{ page }}</span> of <span class="font-medium text-gray-900 dark:text-white">{{ total_pages }}</span>
+        </p>
+    </div>
+    <div class="flex flex-1 justify-between sm:justify-end gap-2">
+        {% if page > 1 %}
+        <a href="/plans?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}"
+           class="rounded-lg bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
+            &larr; Previous
+        </a>
+        {% endif %}
+        {% if page < total_pages %}
+        <a href="/plans?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}"
+           class="rounded-lg bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-200 ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
+            Next &rarr;
+        </a>
+        {% endif %}
+    </div>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-12 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+    <svg class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+    </svg>
+    {% if search %}
+    <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No plans matching "{{ search }}"</h3>
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Try a different search term.</p>
+    {% else %}
+    <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No plans yet</h3>
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Upload your first EXPLAIN plan to get started.</p>
+    <div class="mt-6">
+        <a href="/plans/upload" class="inline-flex items-center px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Upload Plan
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => makeSortable('plansTable'));
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+---
+title: 'Single Sign-On'
+backlink_href: /docs/accounts
+backlink_title: 'Account Management'
+---
+
+Single Sign-On (or SSO) enables management of user access to your organization
+through a third-party identity provider.
+
+pganalyze integrates with providers such as Okta and Microsoft Entra ID
+(formerly Azure AD) using [SAML 2.0](https://en.wikipedia.org/wiki/SAML_2.0).
+This feature is only available on the [Scale Plan](/pricing) and higher. Note
+that the feature is not available during cloud-based pganalyze trials.
+
+## Provider integration
+
+If you integrate with Okta, you can follow the [Okta
+integration](/docs/accounts/sso/okta) steps.
+
+If you integrate with Microsoft Entra ID (formerly Azure AD), you can follow the
+[Azure integration](/docs/accounts/sso/azure) steps.
+
+For all other providers, you can follow the [Custom SAML 2.0
+integration](/docs/accounts/sso/saml2) steps.
+
+## Default membership
+
+New users that authenticate through SSO for the first time will receive the
+standard "View & Modify (All Servers)" permission in your organization, unless
+you specify the default role during the integration setup. You can change the
+default role after completing the integration setup, but note that this will
+_not_ change the role assigned to users who have already authenticated through SSO.
+
+![Screenshot of pganalyze SAML integration setup page](sso_setup.png)
+
+## Migrating to Single Sign-On
+
+Once you have enabled Single Sign-On, in order to authenticate to pganalyze with
+SSO, users must sign in through your SSO provider portal, not through pganalyze
+itself. You currently cannot turn off username/password authentication for your
+whole organization. Instead, you can remove all non-SSO users from the
+organization. Members utilizing Single Sign-On can be identified on the
+**Members** settings page by the `Single Sign-On Required?` column:
+
+![Screenshot of pganalyze Members page indicating the Single Sign-On Required column for each member](members_with_sso.png)
+
+Any existing username/password users in your organization who subsequently
+authenticate through SSO will be converted to SSO accounts tied to your
+organization. They will no longer be able to log in with username/password
+after their initial SSO login.
+
+Note that this only applies to users who have accepted their invitation and who
+do not belong to any other organizations. Users who have not accepted their
+membership will be treated as new users (see [Default
+Membership](#default-membership) above). Users who belong to other organizations
+will receive a separate account for your organization, with the roles of their
+original account (the original account will be removed from your organization).
+
+If you run into any problems with converting users to Single Sign-on, please
+[reach out to pganalyze Support](mailto:support@pganalyze.com).
+
+## Removing user accounts
+
+If a user has left your organization, and you have removed them from your
+identity provider, they will continue to show as a member in pganalyze, even
+though they can no longer sign in. You can remove the members in pganalyze by
+going to the **Members** settings page.
+
+We plan to support System for Cross-Domain Identity Management (SCIM) in the
+future to help with automated ahead of time provisioning and deprovisioning of
+user accounts.
+
+## Turning off Single Sign-On
+
+If you'd like to register a different SAML Identity Provider (IdP), or turn off
+SSO, you can reset the SSO integration. This requires being logged in as a
+username/password based user with the [manage
+permission](/docs/accounts/permissions). You can then click the "Reset
+integration" button on the **Integrations** settings page:
+
+![Screenshot of pganalyze SAML integration with Reset Integration button](sso_success.png)
+
+Resetting the integration will remove all organization members that are linked
+with the IdP.
+
+**All linked permissions and other per-user customizations will be lost with the
+reset.**

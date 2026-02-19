@@ -1,0 +1,80 @@
+[
+  {
+    "PLpgSQL_function": {
+      "action": {
+        "PLpgSQL_stmt_block": {
+          "body": [
+            {
+              "PLpgSQL_stmt_if": {
+                "cond": {
+                  "PLpgSQL_expr": {
+                    "parseMode": 2,
+                    "query": "v_version IS NULL"
+                  }
+                },
+                "lineno": 3,
+                "then_body": [
+                  {
+                    "PLpgSQL_stmt_return": {
+                      "expr": {
+                        "PLpgSQL_expr": {
+                          "parseMode": 2,
+                          "query": "v_name"
+                        }
+                      },
+                      "lineno": 4
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "PLpgSQL_stmt_return": {
+                "expr": {
+                  "PLpgSQL_expr": {
+                    "parseMode": 2,
+                    "query": "v_name || '/' || v_version"
+                  }
+                },
+                "lineno": 6
+              }
+            }
+          ],
+          "lineno": 2
+        }
+      },
+      "datums": [
+        {
+          "PLpgSQL_var": {
+            "datatype": {
+              "PLpgSQL_type": {
+                "typname": "pg_catalog.\"varchar\""
+              }
+            },
+            "refname": "v_name"
+          }
+        },
+        {
+          "PLpgSQL_var": {
+            "datatype": {
+              "PLpgSQL_type": {
+                "typname": "pg_catalog.\"varchar\""
+              }
+            },
+            "refname": "v_version"
+          }
+        },
+        {
+          "PLpgSQL_var": {
+            "datatype": {
+              "PLpgSQL_type": {
+                "typname": "pg_catalog.\"boolean\""
+              }
+            },
+            "refname": "found"
+          }
+        }
+      ]
+    }
+  }
+]

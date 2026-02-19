@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Causal Analysis - QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Page Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Causal Root-Cause Analysis</h1>
+    <p class="mt-2 text-sm text-gray-600">
+      Paste an EXPLAIN JSON plan to identify the most likely root causes of poor
+      query performance. The causal engine evaluates hypotheses like bad
+      cardinality estimates, stale statistics, memory pressure, and join
+      strategy mismatches across PostgreSQL, MySQL, and SQL Server plans.
+    </p>
+  </div>
+
+  <!-- Quick Analysis Form -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Analyze a Plan</h2>
+
+    <form hx-post="/api/ir/causal"
+          hx-target="#causal-results"
+          hx-indicator="#causal-loading">
+
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+        <div class="lg:col-span-3">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            EXPLAIN JSON Plan
+          </label>
+          <textarea name="plan_json" rows="10"
+            class="w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono"
+            placeholder='Paste your EXPLAIN (FORMAT JSON) output here...
+
+Example:
+[
+  {
+    "Plan": {
+      "Node Type": "Seq Scan",
+      "Relation Name": "orders",
+      "Plan Rows": 500000,
+      "Plan Width": 120,
+      "Total Cost": 18250.0,
+      "Actual Rows": 487203,
+      "Actual Loops": 1,
+      "Filter": "(status = &apos;pending&apos;)"
+    }
+  }
+]'></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Engine</label>
+          <select name="engine"
+            class="w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm mb-4">
+            <option value="">Auto-detect</option>
+            <option value="postgres">PostgreSQL</option>
+            <option value="mysql">MySQL</option>
+            <option value="sqlserver">SQL Server</option>
+          </select>
+
+          <button type="submit"
+            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
+            Analyze Root Causes
+          </button>
+
+          <div id="causal-loading" class="htmx-indicator mt-3 text-center">
+            <svg class="animate-spin h-5 w-5 text-indigo-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <p class="text-xs text-gray-500 mt-1">Analyzing...</p>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <div id="causal-results"></div>
+  </div>
+
+  <!-- Hypothesis Catalog -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Hypothesis Catalog</h2>
+    <p class="text-sm text-gray-600 mb-6">
+      The causal engine evaluates these root-cause hypotheses against evidence
+      from the plan. Each hypothesis has evidence predicates that consume IR
+      facts and optional database probes.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <div class="rounded-xl border border-red-200 bg-red-50 p-5">
+        <div class="flex items-center mb-2">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 mr-2">H2</span>
+          <h3 class="text-sm font-semibold text-gray-900">Bad Cardinality Estimate</h3>
+        </div>
+        <p class="text-xs text-gray-600 mb-2">
+          Row estimates diverge strongly from actuals. The single most common
+          cause of poor plan choices.
+        </p>
+        <div class="flex items-center text-xs text-gray-500">
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 mr-1">has_actual_rows</span>
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100">has_estimated_rows</span>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-orange-200 bg-orange-50 p-5">
+        <div class="flex items-center mb-2">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-800 mr-2">H1</span>
+          <h3 class="text-sm font-semibold text-gray-900">Missing Access Path</h3>
+        </div>
+        <p class="text-xs text-gray-600 mb-2">
+          No suitable index exists for the query predicates, forcing a
+          sequential scan.
+        </p>
+        <div class="flex items-center text-xs text-gray-500">
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100">portable</span>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-5">
+        <div class="flex items-center mb-2">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 mr-2">H3</span>
+          <h3 class="text-sm font-semibold text-gray-900">Stale Statistics</h3>
+        </div>
+        <p class="text-xs text-gray-600 mb-2">
+          Table statistics are out of date, producing incorrect cardinality
+          estimates. Requires DB probe to detect.
+        </p>
+        <div class="flex items-center text-xs text-gray-500">
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100">has_db_stats</span>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-blue-200 bg-blue-50 p-5">
+        <div class="flex items-center mb-2">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 mr-2">H6</span>
+          <h3 class="text-sm font-semibold text-gray-900">Memory Pressure / Spill</h3>
+        </div>
+        <p class="text-xs text-gray-600 mb-2">
+          Sorts or hash joins spilling to disk due to insufficient work_mem.
+        </p>
+        <div class="flex items-center text-xs text-gray-500">
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100">has_temp_spill</span>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-purple-200 bg-purple-50 p-5">
+        <div class="flex items-center mb-2">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 mr-2">H7</span>
+          <h3 class="text-sm font-semibold text-gray-900">Join Strategy Mismatch</h3>
+        </div>
+        <p class="text-xs text-gray-600 mb-2">
+          Nested loop join selected where hash or merge would dominate, often
+          caused by bad cardinality estimates.
+        </p>
+        <div class="flex items-center text-xs text-gray-500">
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100">portable</span>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-gray-200 bg-gray-50 p-5">
+        <div class="flex items-center mb-2">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-800 mr-2">H4</span>
+          <h3 class="text-sm font-semibold text-gray-900">Insufficient Stats for Skew</h3>
+        </div>
+        <p class="text-xs text-gray-600 mb-2">
+          Histograms/MCVs are insufficient for data skew or correlated columns.
+          May need extended statistics.
+        </p>
+        <div class="flex items-center text-xs text-gray-500">
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100">has_actual_rows</span>
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 ml-1">has_estimated_rows</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Three-Layer IR Architecture -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Universal Plan IR Architecture</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="text-center">
+        <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+          <span class="text-xl font-bold text-indigo-600">A</span>
+        </div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-1">Core Operator Algebra</h3>
+        <p class="text-xs text-gray-600">
+          Scan, Join, Aggregate, Sort, Materialize, SetOp, Limit, Compute, Gather --
+          a small, stable set of categories every engine maps into.
+        </p>
+      </div>
+      <div class="text-center">
+        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+          <span class="text-xl font-bold text-green-600">B</span>
+        </div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-1">Portable Properties</h3>
+        <p class="text-xs text-gray-600">
+          Cardinality signals, cost signals, time signals, memory/IO signals,
+          parallelism signals, predicates -- all optional, capability-gated.
+        </p>
+      </div>
+      <div class="text-center">
+        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+          <span class="text-xl font-bold text-orange-600">C</span>
+        </div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-1">Engine Annotations</h3>
+        <p class="text-xs text-gray-600">
+          PostgreSQL heap fetches, MySQL access types, SQL Server Key Lookups,
+          Oracle distribution methods -- structured but engine-specific.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLI Usage -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">CLI Usage</h2>
+    <div class="space-y-4">
+      <div>
+        <h3 class="text-sm font-medium text-gray-700 mb-2">Translate to IR</h3>
+        <div class="bg-gray-900 rounded-lg p-4 relative">
+          <code class="text-sm text-green-400">querysense ir translate explain.json --engine postgres</code>
+          <button onclick="copyToClipboard('querysense ir translate explain.json --engine postgres', this)"
+            class="absolute top-2 right-2 text-gray-400 hover:text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-medium text-gray-700 mb-2">Run Causal Analysis</h3>
+        <div class="bg-gray-900 rounded-lg p-4 relative">
+          <code class="text-sm text-green-400">querysense ir causal explain.json --top 5</code>
+          <button onclick="copyToClipboard('querysense ir causal explain.json --top 5', this)"
+            class="absolute top-2 right-2 text-gray-400 hover:text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-medium text-gray-700 mb-2">Compare Two Plans</h3>
+        <div class="bg-gray-900 rounded-lg p-4 relative">
+          <code class="text-sm text-green-400">querysense ir compare before.json after.json</code>
+          <button onclick="copyToClipboard('querysense ir compare before.json after.json', this)"
+            class="absolute top-2 right-2 text-gray-400 hover:text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-medium text-gray-700 mb-2">View Plan Tree</h3>
+        <div class="bg-gray-900 rounded-lg p-4 relative">
+          <code class="text-sm text-green-400">querysense ir tree explain.json</code>
+          <button onclick="copyToClipboard('querysense ir tree explain.json', this)"
+            class="absolute top-2 right-2 text-gray-400 hover:text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

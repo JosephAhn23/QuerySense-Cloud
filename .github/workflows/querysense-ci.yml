@@ -1,0 +1,123 @@
+# QuerySense CI — Plan Linter for Pull Requests
+#
+# This workflow runs QuerySense on EXPLAIN plans committed to the repo
+# and posts findings as PR comments. It acts as a "query plan linter"
+# that catches performance regressions before they reach production.
+#
+# Setup:
+#   1. Store EXPLAIN plans as JSON files in your repo (e.g., plans/)
+#   2. Add this workflow to .github/workflows/
+#   3. Push a PR — QuerySense will comment with findings
+#
+# Tiers:
+#   Community: CLI analysis only (use `querysense analyze` locally)
+#   Pro:       Basic CI pass/fail
+#   Team:      PR comments + regression blocking + baseline tracking
+#   Enterprise: Custom rules + advanced workflows
+
+name: QuerySense Plan Linter
+
+on:
+  pull_request:
+    paths:
+      - 'plans/**/*.json'
+      - 'sql/**/*.sql'
+
+  # Allow manual dispatch for testing
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  lint-plans:
+    name: Analyze Query Plans
+    runs-on: ubuntu-latest
+
+    services:
+      # Optional: spin up a PostgreSQL instance for Level 3 (DB-validated) analysis
+      # Uncomment if you want QuerySense to probe the database for table stats
+      # postgres:
+      #   image: postgres:16
+      #   env:
+      #     POSTGRES_DB: testdb
+      #     POSTGRES_USER: postgres
+      #     POSTGRES_PASSWORD: postgres
+      #   ports:
+      #     - 5432:5432
+      #   options: >-
+      #     --health-cmd pg_isready
+      #     --health-interval 10s
+      #     --health-timeout 5s
+      #     --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for baseline comparison
+
+      - name: Run QuerySense
+        uses: ./.github/actions/querysense
+        id: querysense
+        with:
+          plan-files: 'plans/**/*.json'
+          fail-on: 'warning'           # Fail CI on warnings or critical
+          baseline-file: '.querysense/baselines.json'
+          comment-on-pr: 'true'        # Post results as PR comment
+          python-version: '3.11'
+          querysense-version: 'latest'  # Or pin: '0.5.2'
+
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: querysense-results
+          path: |
+            .querysense-results.json
+            .querysense-comment.md
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## QuerySense Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.querysense.outputs.has-failures }}" = "true" ]; then
+            echo "**Status:** :x: Issues found at warning level or above" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Status:** :white_check_mark: All checks passed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See the [PR comment](#issuecomment) for detailed findings." >> $GITHUB_STEP_SUMMARY
+
+  # Optional: Update baselines on main branch merges
+  update-baselines:
+    name: Update Plan Baselines
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install QuerySense
+        run: pip install querysense
+
+      - name: Update Baselines
+        run: |
+          querysense baseline update "plans/**/*.json" \
+            --output .querysense/baselines.json
+
+      - name: Commit Baseline Updates
+        run: |
+          git config user.name "QuerySense Bot"
+          git config user.email "querysense-bot@users.noreply.github.com"
+          git add .querysense/baselines.json
+          git diff --staged --quiet || git commit -m "chore: update QuerySense plan baselines"
+          git push

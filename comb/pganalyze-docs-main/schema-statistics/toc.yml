@@ -1,0 +1,8 @@
+- mount: schema-statistics
+  items:
+  - name: Overview
+    href: schema-statistics
+  - name: "Column Statistics / HOT Updates"
+    href: schema-statistics/columns-hot-updates
+  - name: Buffer Cache Statistics
+    href: schema-statistics/buffer-cache

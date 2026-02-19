@@ -1,0 +1,105 @@
+require: rubocop-rspec
+
+AllCops:
+  NewCops: enable
+  Exclude:
+    - ext/pg_query/extconf.rb
+    - vendor/**/*
+    - tmp/**/*
+    - lib/pg_query/pg_query_pb.rb
+    - lib/pg_query/json_field_names.rb
+    - Rakefile
+
+Layout/HashAlignment:
+  Exclude:
+    - spec/**/*
+
+Layout/SpaceAroundOperators:
+  Exclude:
+    - spec/**/*
+
+Layout/SpaceInsideHashLiteralBraces:
+  Exclude:
+    - spec/**/*
+
+Style/WordArray:
+  Exclude:
+    - spec/**/*
+
+Style/StringLiterals:
+  Exclude:
+    - spec/**/*
+
+Layout/LineLength:
+  Enabled: false
+
+Layout/EmptyLineAfterGuardClause:
+  Enabled: false
+
+Style/FormatStringToken:
+  Enabled: false
+
+Style/StringConcatenation:
+  Enabled: false
+
+Style/IfUnlessModifier:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/SafeNavigation:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+# extend self preserves private methods,
+# module_function buggily removes them.
+Style/ModuleFunction:
+  Enabled: false
+
+Metrics/MethodLength:
+  Enabled: false
+
+Metrics/ClassLength:
+  Enabled: false
+
+Metrics/AbcSize:
+  Enabled: false
+
+Metrics/BlockNesting:
+  Enabled: false
+
+Metrics/PerceivedComplexity:
+  Enabled: false
+
+Metrics/BlockLength:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Enabled: false
+
+RSpec/NestedGroups:
+  Enabled: false
+
+RSpec/DescribedClass:
+  Enabled: false
+
+RSpec/ContextWording:
+  Enabled: false
+
+RSpec/MatchArray:
+  Enabled: false
+
+RSpec/NamedSubject:
+  Enabled: false
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+Lint/ImplicitStringConcatenation:
+  Enabled: false

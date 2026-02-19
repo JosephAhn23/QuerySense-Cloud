@@ -1,0 +1,109 @@
+# Example: QuerySense CI/CD Plan Linting
+#
+# This workflow demonstrates how to use QuerySense as a CI gate
+# for PostgreSQL EXPLAIN plan quality. It:
+#
+# 1. Spins up a PostgreSQL test database
+# 2. Loads schema and test data
+# 3. Generates EXPLAIN plans from query files
+# 4. Runs QuerySense analysis with baseline comparison
+# 5. Posts results as a PR comment
+# 6. Fails the build if regressions or issues are found
+# 7. Updates baselines on main branch merges
+#
+# To use this in your project:
+# 1. Copy this workflow to .github/workflows/
+# 2. Put your EXPLAIN JSON files in plans/ (or adjust the path)
+# 3. Commit a baseline: querysense baseline update "plans/**/*.json"
+# 4. Open a PR - QuerySense will analyze and comment automatically
+
+name: QuerySense Plan Analysis
+
+on:
+  pull_request:
+    paths:
+      # Trigger on changes to queries, schema, or plan files
+      - 'app/models/**'
+      - 'db/**'
+      - 'plans/**/*.json'
+      - '.querysense/**'
+  push:
+    branches: [main]
+    paths:
+      - 'plans/**/*.json'
+
+jobs:
+  analyze-plans:
+    name: Lint EXPLAIN Plans
+    runs-on: ubuntu-latest
+
+    # Optional: PostgreSQL service for Level 3 analysis
+    # Remove this block if you only need Level 1-2 (plan + SQL analysis)
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Option A: Use pre-generated EXPLAIN JSON files
+      # If your plans/ directory already contains EXPLAIN JSON files,
+      # skip directly to the QuerySense action.
+
+      # Option B: Generate EXPLAIN plans from SQL files
+      # Uncomment the following steps if you want to generate plans in CI:
+      #
+      # - name: Setup test database
+      #   run: |
+      #     PGPASSWORD=postgres psql -h localhost -U postgres -d testdb -f db/schema.sql
+      #     PGPASSWORD=postgres psql -h localhost -U postgres -d testdb -f db/seeds.sql
+      #
+      # - name: Generate EXPLAIN plans
+      #   run: |
+      #     mkdir -p plans
+      #     for sql_file in db/queries/*.sql; do
+      #       query=$(cat "$sql_file")
+      #       basename=$(basename "$sql_file" .sql)
+      #       PGPASSWORD=postgres psql -h localhost -U postgres -d testdb \
+      #         -t -A -c "EXPLAIN (ANALYZE, FORMAT JSON) $query" \
+      #         > "plans/${basename}.json" 2>/dev/null || true
+      #     done
+
+      # Run QuerySense analysis
+      - name: Run QuerySense
+        uses: ./.github/actions/querysense
+        with:
+          plan-files: 'plans/**/*.json'
+          fail-on: 'warning'
+          baseline-file: '.querysense/baselines.json'
+          comment-on-pr: 'true'
+          allow-plain: 'false'
+
+      # Update baselines on main branch (after merge)
+      - name: Update baselines
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          pip install querysense
+          querysense baseline update "plans/**/*.json" -o .querysense/baselines.json
+
+          # Check if baselines changed
+          if git diff --quiet .querysense/baselines.json 2>/dev/null; then
+            echo "No baseline changes"
+          else
+            git config user.name 'QuerySense Bot'
+            git config user.email 'querysense-bot@users.noreply.github.com'
+            git add .querysense/baselines.json
+            git commit -m "chore: update QuerySense baselines [skip ci]"
+            git push
+          fi

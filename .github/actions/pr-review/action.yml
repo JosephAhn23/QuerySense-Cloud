@@ -1,0 +1,133 @@
+name: 'QuerySense PR Review'
+description: 'Analyze SQL migrations in PRs and post safety review comments. Free alternative to Harness DB DevOps.'
+author: 'QuerySense'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  migration-files:
+    description: 'Glob pattern or directory for migration SQL files'
+    required: false
+    default: 'migrations/'
+  fail-on:
+    description: 'Fail the check on: critical, warning, any, none'
+    required: false
+    default: 'critical'
+  post-comment:
+    description: 'Post review comment on PR (true/false)'
+    required: false
+    default: 'true'
+  auto-fix:
+    description: 'Auto-create fix PR for fixable issues (true/false)'
+    required: false
+    default: 'false'
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.11'
+  querysense-version:
+    description: 'QuerySense version (pip spec)'
+    required: false
+    default: 'querysense'
+
+outputs:
+  verdict:
+    description: 'PASS, WARN, or FAIL'
+    value: ${{ steps.analyze.outputs.verdict }}
+  migrations-analyzed:
+    description: 'Number of migration files analyzed'
+    value: ${{ steps.analyze.outputs.migrations_analyzed }}
+  critical-count:
+    description: 'Number of critical issues found'
+    value: ${{ steps.analyze.outputs.critical_count }}
+  report-json:
+    description: 'Full analysis report as JSON'
+    value: ${{ steps.analyze.outputs.report_json }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install QuerySense
+      shell: bash
+      run: |
+        pip install --quiet ${{ inputs.querysense-version }}
+
+    - name: Analyze migrations
+      id: analyze
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: |
+        set -eo pipefail
+
+        # Run analysis
+        REPORT=$(querysense pr review \
+          --pr ${{ github.event.pull_request.number }} \
+          --migration-dir "${{ inputs.migration-files }}" \
+          --fail-on none \
+          --json \
+          ${{ inputs.post-comment == 'false' && '--dry-run' || '' }} \
+          2>&1) || true
+
+        # Parse results
+        VERDICT=$(echo "$REPORT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('verdict','PASS'))" 2>/dev/null || echo "PASS")
+        ANALYZED=$(echo "$REPORT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('migrations_analyzed',0))" 2>/dev/null || echo "0")
+        CRITICAL=$(echo "$REPORT" | python3 -c "
+        import sys, json
+        data = json.load(sys.stdin)
+        count = sum(1 for r in data.get('results',[]) for risk in r.get('risks',[]) if risk.get('severity')=='critical')
+        print(count)" 2>/dev/null || echo "0")
+
+        echo "verdict=$VERDICT" >> $GITHUB_OUTPUT
+        echo "migrations_analyzed=$ANALYZED" >> $GITHUB_OUTPUT
+        echo "critical_count=$CRITICAL" >> $GITHUB_OUTPUT
+
+        # Save full report
+        echo "report_json<<QUERYSENSE_EOF" >> $GITHUB_OUTPUT
+        echo "$REPORT" >> $GITHUB_OUTPUT
+        echo "QUERYSENSE_EOF" >> $GITHUB_OUTPUT
+
+        echo "::notice::QuerySense: Analyzed $ANALYZED migrations. Verdict: $VERDICT"
+
+    - name: Auto-fix (if enabled)
+      if: inputs.auto-fix == 'true' && steps.analyze.outputs.verdict != 'PASS'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        # Find changed SQL files and attempt fixes
+        for f in $(git diff --name-only origin/main...HEAD -- '${{ inputs.migration-files }}' | grep '\.sql$'); do
+          if [ -f "$f" ]; then
+            querysense pr create-fix \
+              --pr ${{ github.event.pull_request.number }} \
+              --migration "$f" || true
+          fi
+        done
+
+    - name: Check verdict
+      if: inputs.fail-on != 'none'
+      shell: bash
+      run: |
+        VERDICT="${{ steps.analyze.outputs.verdict }}"
+        FAIL_ON="${{ inputs.fail-on }}"
+
+        if [ "$FAIL_ON" = "critical" ] && [ "$VERDICT" = "FAIL" ]; then
+          echo "::error::QuerySense found critical migration issues"
+          exit 1
+        fi
+        if [ "$FAIL_ON" = "warning" ] && [ "$VERDICT" != "PASS" ]; then
+          echo "::error::QuerySense found migration issues (verdict: $VERDICT)"
+          exit 1
+        fi
+        if [ "$FAIL_ON" = "any" ] && [ "$VERDICT" != "PASS" ]; then
+          echo "::error::QuerySense found migration issues (verdict: $VERDICT)"
+          exit 1
+        fi

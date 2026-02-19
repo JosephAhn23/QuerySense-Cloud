@@ -1,0 +1,130 @@
+---
+title: 'Welcome to the pganalyze documentation!'
+---
+
+import styles from './style.module.scss'
+
+import OverviewInstallChoice from './_install_choice.mdx'
+
+Learn more about how pganalyze works, and how to connect it with your Postgres database. pganalyze enables you to deliver consistent PostgreSQL performance and availability, at any scale.
+
+## Installation guides
+
+In order to use pganalyze you need to install the pganalyze collector in your environment, either on the database server directly, or a container / VM that can connect to it when using managed database services. The collector sends query data and other statistics on a continuous basis — to the pganalyze cloud service, or to your pganalyze Enterprise Server installation.
+
+To continue, select in which environment you are running your Postgres database:
+
+<OverviewInstallChoice />
+
+If you're interested in integrating pganalyze with your database hosting provider but don't see it listed as officially supported, you can follow the [manual installation guide for self-managed databases](docs/install/self_managed/01_create_monitoring_user). You will need to run the pganalyze collector on a server with network connectivity to your database in order to monitor your database. Note that system-level statistics (memory usage, I/O, etc.) cannot be collected this way and will not be available in pganalyze. [Log Insights](/docs/log-insights) (and the features that depend on it) is only available if your provider exports Postgres logs for your database server [via syslog](/docs/log-insights/setup/syslog-server).
+
+## Explore how pganalyze works
+
+<div className={styles.overviewFeatureChoice}>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/index-advisor/getting-started"
+  >
+    <strong>pganalyze Index Advisor</strong>
+    Automatically finds missing indexes and unused index insights
+  </Link>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/indexing-engine"
+  >
+    <strong>Indexing Engine</strong>
+    Extracts table scans and identifies missing indexes using "What If?" analysis
+  </Link>
+</div>
+<div className={styles.overviewFeatureChoice}>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/vacuum-advisor"
+  >
+    <strong>pganalyze VACUUM Advisor</strong>
+    Workload-aware autovacuum tuning and insights for Postgres
+  </Link>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/checks"
+  >
+    <strong>Alerts & Check-Up</strong>
+    Detects common database problems and notifies via email, Slack and PagerDuty
+  </Link>
+</div>
+<div className={styles.overviewFeatureChoice}>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/connections"
+  >
+    <strong>Connections</strong>
+    Monitors wait events, lock problems and other activity in near-realtime
+  </Link>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/explain"
+  >
+    <strong>EXPLAIN</strong>
+    Collects query plans for slow Postgres queries and finds insights
+  </Link>
+</div>
+<div className={styles.overviewFeatureChoice}>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/schema-statistics"
+  >
+    <strong>Schema Statistics</strong>
+    Tracks workload patterns, schema and data model design, as well as changes over time
+  </Link>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/query-performance"
+  >
+    <strong>Query Performance</strong>
+    Identify slowdowns for specific queries over time
+  </Link>
+</div>
+<div className={styles.overviewFeatureChoice}>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/log-insights"
+  >
+    <strong>Log Insights</strong>
+    Continuously monitors your Postgres error log for unexpected events
+  </Link>
+</div>
+
+## Manage your pganalyze installation
+
+<div className={styles.overviewFeatureChoice}>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/accounts"
+  >
+    <strong>Account Management & SSO</strong>
+    Manage accounts with different roles, and enable Single Sign-On through SAML
+  </Link>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/enterprise"
+  >
+    <strong>pganalyze Enterprise Server</strong>
+    Install pganalyze as a fully self-hosted version behind your firewall
+  </Link>
+</div>
+<div className={styles.overviewFeatureChoice}>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/collector"
+  >
+    <strong>pganalyze collector</strong>
+    Configure the agent that runs within your environment to collect data
+  </Link>
+  <Link
+    className={styles.overviewFeatureChoiceStep}
+    to="/docs/api"
+  >
+    <strong>GraphQL API</strong>
+    Retrieve data that is available in pganalyze programmatically
+  </Link>
+</div>

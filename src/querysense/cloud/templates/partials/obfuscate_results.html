@@ -1,0 +1,34 @@
+{% if error %}
+<div class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+    <p class="text-sm text-red-700 dark:text-red-300">{{ error }}</p>
+</div>
+{% else %}
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <!-- Original -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+        <h3 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Original</h3>
+        <pre class="text-sm font-mono text-red-600 dark:text-red-400 whitespace-pre-wrap overflow-x-auto max-h-64">{{ original }}</pre>
+    </div>
+
+    <!-- Obfuscated -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-green-200 dark:border-green-800 p-5">
+        <h3 class="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wider mb-2">Obfuscated</h3>
+        <pre class="text-sm font-mono text-green-600 dark:text-green-400 whitespace-pre-wrap overflow-x-auto max-h-64">{{ obfuscated }}</pre>
+    </div>
+</div>
+
+{% if report and report.total_matches is defined %}
+<div class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 text-sm">
+    <span class="font-medium text-gray-700 dark:text-gray-300">
+        PII matches found: <span class="text-yellow-600 font-bold">{{ report.total_matches }}</span>
+    </span>
+    {% if report.matches_by_type %}
+    <span class="ml-3 text-gray-500 dark:text-gray-400">
+        ({% for type, count in report.matches_by_type.items() %}{{ type }}: {{ count }}{% if not loop.last %}, {% endif %}{% endfor %})
+    </span>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endif %}

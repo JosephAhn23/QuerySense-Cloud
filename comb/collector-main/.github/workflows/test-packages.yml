@@ -1,0 +1,46 @@
+name: Test Packages
+
+on:
+  schedule:
+    - cron: '0 15 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  build_x86_64:
+    runs-on: ubuntu-24.04-4-cores
+    permissions: {}
+
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Build packages
+      run: |
+        GIT_VERSION=HEAD VERSION=0.0.0 make -C packages build_x86_64
+
+    - name: Test packages
+      run: |
+        GIT_VERSION=HEAD VERSION=0.0.0 make -C packages test_x86_64
+
+  build_arm64:
+    runs-on: ubuntu-24.04-arm
+    permissions: {}
+
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Build packages
+      run: |
+        GIT_VERSION=HEAD VERSION=0.0.0 make -C packages build_arm64
+
+    - name: Test packages
+      run: |
+        GIT_VERSION=HEAD VERSION=0.0.0 make -C packages test_arm64

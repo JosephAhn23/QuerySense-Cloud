@@ -1,0 +1,34 @@
+---
+work_in_progress: true
+log_classification: T83
+log_title: Statement notice
+log_category: statements
+collector_key: STATEMENT_LOG
+tooltip: Statement log based on log_statement setting
+urgency: low
+sqlstate: n/a
+---
+
+**Example Postgres Log Output:**
+
+```
+LOG: execute <unnamed>: SELECT $1, $2
+DETAIL: parameters: $1 = '1', $2 = 't'
+```
+
+```
+LOG: statement: EXECUTE x(1);
+DETAIL: prepare: PREPARE x AS SELECT $1;
+```
+
+**Explanation:**
+
+...
+
+**Recommended Action:**
+
+...
+
+**Learn More:**
+
+No additional resources available.

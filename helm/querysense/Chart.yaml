@@ -1,0 +1,17 @@
+apiVersion: v2
+name: querysense
+description: QuerySense — open-source database performance intelligence platform
+type: application
+version: 0.9.0
+appVersion: "0.9.0"
+keywords:
+  - postgresql
+  - database
+  - performance
+  - query-optimization
+  - observability
+maintainers:
+  - name: QuerySense
+    url: https://github.com/querysense/querysense
+sources:
+  - https://github.com/querysense/querysense

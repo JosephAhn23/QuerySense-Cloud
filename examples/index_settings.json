@@ -1,0 +1,15 @@
+{
+    "Goals": [
+        {
+            "Name": "Minimal Cost",
+            "Strictness": 0.9
+        },
+        {
+            "Name": "Minimal Indexes"
+        }
+    ],
+    "Rules": {
+        "Maximum Number of Indexes": 4
+    },
+    "TimeLimitSeconds": 10
+}

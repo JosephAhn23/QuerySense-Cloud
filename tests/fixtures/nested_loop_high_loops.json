@@ -1,0 +1,64 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Nested Loop",
+      "Parallel Aware": false,
+      "Join Type": "Inner",
+      "Startup Cost": 0.43,
+      "Total Cost": 87234.56,
+      "Plan Rows": 50000,
+      "Plan Width": 312,
+      "Actual Startup Time": 0.034,
+      "Actual Total Time": 4523.789,
+      "Actual Rows": 48756,
+      "Actual Loops": 1,
+      "Inner Unique": false,
+      "Plans": [
+        {
+          "Node Type": "Seq Scan",
+          "Parent Relationship": "Outer",
+          "Parallel Aware": false,
+          "Relation Name": "orders",
+          "Schema": "public",
+          "Alias": "o",
+          "Startup Cost": 0.00,
+          "Total Cost": 1834.00,
+          "Plan Rows": 10000,
+          "Plan Width": 36,
+          "Actual Startup Time": 0.012,
+          "Actual Total Time": 45.234,
+          "Actual Rows": 10234,
+          "Actual Loops": 1,
+          "Filter": "(created_at > '2024-01-01'::date)",
+          "Rows Removed by Filter": 89766,
+          "Shared Hit Blocks": 834,
+          "Shared Read Blocks": 0
+        },
+        {
+          "Node Type": "Index Scan",
+          "Parent Relationship": "Inner",
+          "Parallel Aware": false,
+          "Scan Direction": "Forward",
+          "Index Name": "order_items_order_id_idx",
+          "Relation Name": "order_items",
+          "Schema": "public",
+          "Alias": "oi",
+          "Startup Cost": 0.43,
+          "Total Cost": 8.50,
+          "Plan Rows": 5,
+          "Plan Width": 276,
+          "Actual Startup Time": 0.003,
+          "Actual Total Time": 0.421,
+          "Actual Rows": 5,
+          "Actual Loops": 10234,
+          "Index Cond": "(order_id = o.id)",
+          "Shared Hit Blocks": 40936,
+          "Shared Read Blocks": 0
+        }
+      ]
+    },
+    "Planning Time": 0.234,
+    "Execution Time": 4589.123
+  }
+]
+

@@ -1,0 +1,58 @@
+# QuerySense Advisor — Example Custom Checks
+#
+# Place YAML files in this directory and load with:
+#   querysense advisor run --dsn ... --checks-dir ./checks/
+#
+# Each check has:
+#   name: unique identifier
+#   description: human-readable description
+#   query: SQL to run (rows returned = issues found, no rows = pass)
+#   category: grouping (vacuum, config, index, replication, etc.)
+#   severity: emergency|alert|critical|error|warning|notice|info|debug
+#   interval: frequent (4h)|standard (24h)|rare (78h)|on_demand
+#   remediation: fix command (supports {column} placeholders from first row)
+#   threshold_column: column name for dynamic severity escalation
+#   warning_threshold: escalate to WARNING when threshold exceeded
+#   critical_threshold: escalate to CRITICAL when threshold exceeded
+
+- name: "custom_large_tables_no_pk"
+  description: "Large tables without a primary key"
+  category: "schema"
+  severity: "warning"
+  interval: "rare"
+  query: |
+    SELECT
+        n.nspname AS schema,
+        c.relname AS table_name,
+        pg_size_pretty(pg_total_relation_size(c.oid)) AS size,
+        c.reltuples::bigint AS est_rows
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r'
+      AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+      AND NOT EXISTS (
+          SELECT 1 FROM pg_index i
+          WHERE i.indrelid = c.oid AND i.indisprimary
+      )
+      AND c.reltuples > 10000
+    ORDER BY c.reltuples DESC
+  remediation: "ALTER TABLE {schema}.{table_name} ADD PRIMARY KEY (id);"
+
+- name: "custom_sequences_near_limit"
+  description: "Sequences approaching max value"
+  category: "schema"
+  severity: "critical"
+  interval: "standard"
+  query: |
+    SELECT
+        sequencename AS seq_name,
+        last_value,
+        max_value,
+        round(100.0 * last_value / max_value, 2) AS pct_used
+    FROM pg_sequences
+    WHERE last_value > 0.8 * max_value
+    ORDER BY pct_used DESC
+  remediation: "ALTER SEQUENCE {seq_name} AS bigint; -- Expand to bigint range"
+  threshold_column: "pct_used"
+  warning_threshold: 80
+  critical_threshold: 95

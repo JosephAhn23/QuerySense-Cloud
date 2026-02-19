@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Lock Monitor — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Lock Monitor</h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 uppercase tracking-wider">Free</span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+            Detect blocking queries, deadlocks, and lock contention in real-time.
+            <span class="font-medium text-gray-700 dark:text-gray-300">pganalyze charges $149+/mo for this. QuerySense gives it free.</span>
+        </p>
+    </div>
+
+    <!-- Connection Form -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+        <form hx-post="/locks/analyze" hx-target="#lock-results" hx-indicator="#lock-spinner">
+            <div class="flex gap-4 items-end">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        PostgreSQL Connection String
+                    </label>
+                    <input type="text" name="dsn" required
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-brand-500 focus:ring-brand-500"
+                        placeholder="postgresql://user:pass@localhost:5432/mydb"
+                        value="">
+                </div>
+                <button type="submit"
+                    class="inline-flex items-center px-5 py-2.5 rounded-lg bg-brand-600 text-white font-medium text-sm hover:bg-brand-700 transition-colors shadow-sm">
+                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    Analyze Locks
+                </button>
+            </div>
+        </form>
+
+        <!-- Spinner -->
+        <div id="lock-spinner" class="htmx-indicator mt-4">
+            <div class="flex items-center justify-center py-6">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+                <span class="ml-3 text-sm text-gray-500">Querying pg_locks...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div id="lock-results"></div>
+
+    <!-- Guide -->
+    <div class="bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700 p-6 mt-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">What This Detects</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="flex gap-2">
+                <span class="text-red-500 font-bold">●</span>
+                <div>
+                    <p class="font-medium text-gray-800 dark:text-gray-200">Blocking Chains</p>
+                    <p class="text-gray-500 dark:text-gray-400">Queries blocking other queries from executing</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <span class="text-red-500 font-bold">●</span>
+                <div>
+                    <p class="font-medium text-gray-800 dark:text-gray-200">Deadlocks</p>
+                    <p class="text-gray-500 dark:text-gray-400">Circular blocking where neither query can proceed</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <span class="text-yellow-500 font-bold">●</span>
+                <div>
+                    <p class="font-medium text-gray-800 dark:text-gray-200">Lock Contention</p>
+                    <p class="text-gray-500 dark:text-gray-400">Excessive exclusive locks slowing your database</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

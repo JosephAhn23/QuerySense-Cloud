@@ -1,0 +1,141 @@
+<!-- Index advisor results partial (HTMX) -->
+<div class="space-y-4 mt-4 slide-in">
+
+    <!-- Summary -->
+    {% set needs_changes = (result.get('recommended_indexes', []) | length > 0) or (result.get('dropped_indexes', []) | length > 0) %}
+
+    {% if needs_changes %}
+    <div class="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4">
+        <div class="flex items-center">
+            <svg class="h-5 w-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            <h3 class="ml-2 text-lg font-bold text-yellow-800 dark:text-yellow-300">INDEX CHANGES RECOMMENDED</h3>
+        </div>
+        <p class="mt-1 text-sm text-yellow-700 dark:text-yellow-400">
+            {{ result.get('recommended_indexes', []) | length }} new index(es) and
+            {{ result.get('dropped_indexes', []) | length }} drop(s) recommended.
+        </p>
+    </div>
+    {% else %}
+    <div class="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
+        <div class="flex items-center">
+            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <h3 class="ml-2 text-lg font-bold text-green-800 dark:text-green-300">SCHEMA IS OPTIMAL</h3>
+        </div>
+        <p class="mt-1 text-sm text-green-700 dark:text-green-400">No missing indexes detected. CP-SAT solver confirms the current index set is optimal.</p>
+    </div>
+    {% endif %}
+
+    <!-- Pipeline Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 text-center">
+            <p class="text-xs text-gray-500 uppercase">Tables</p>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">{{ result.get('tables_analyzed', 0) }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 text-center">
+            <p class="text-xs text-gray-500 uppercase">Scans</p>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">{{ result.get('scans_extracted', 0) }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 text-center">
+            <p class="text-xs text-gray-500 uppercase">Candidates</p>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">{{ result.get('candidates_generated', 0) }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 text-center">
+            <p class="text-xs text-gray-500 uppercase">Cost Reduction</p>
+            <p class="text-xl font-bold text-green-600">{{ "%.1f"|format(result.get('total_cost_reduction_pct', 0)) }}%</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 text-center">
+            <p class="text-xs text-gray-500 uppercase">Solve Time</p>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">{{ "%.0f"|format(result.get('total_time_ms', 0)) }}ms</p>
+        </div>
+    </div>
+
+    <!-- Recommended Indexes -->
+    {% set recs = result.get('recommended_indexes', []) %}
+    {% if recs %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700 bg-green-50 dark:bg-green-900/10">
+            <h3 class="text-sm font-semibold text-green-700 dark:text-green-300">Create {{ recs | length }} Index(es)</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                <thead class="bg-gray-50 dark:bg-slate-700/50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Table</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Columns</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Scans</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Frequency</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Improvement</th>
+                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">IWO</th>
+                        <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Verified</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                    {% for idx in recs %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30">
+                        <td class="px-4 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-200">{{ idx.get('table', '') }}</td>
+                        <td class="px-4 py-2.5 text-sm font-mono text-cyan-600 dark:text-cyan-400">{{ idx.get('columns', []) | join(', ') }}</td>
+                        <td class="px-4 py-2.5 text-sm text-right text-gray-600">{{ idx.get('scans_covered', 0) }}</td>
+                        <td class="px-4 py-2.5 text-sm text-right text-gray-600">{{ "{:,}".format(idx.get('total_frequency', 0)) }}</td>
+                        <td class="px-4 py-2.5 text-sm text-right text-green-600 font-medium">{{ "%.0f"|format(idx.get('improvement_ratio', 0) * 100) }}%</td>
+                        <td class="px-4 py-2.5 text-sm text-right text-gray-600">{{ "%.2f"|format(idx.get('iwo_score', 0)) }}</td>
+                        <td class="px-4 py-2.5 text-sm text-center">
+                            {% if idx.get('hypopg_verified') %}
+                                <span class="text-green-500">✓</span>
+                            {% else %}
+                                <span class="text-gray-300">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SQL block -->
+        <div class="px-4 py-3 bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-xs font-semibold text-gray-500 uppercase">CREATE INDEX SQL</p>
+                <button onclick="navigator.clipboard.writeText(document.getElementById('idx-sql').innerText)" class="text-xs text-brand-500 hover:text-brand-700 underline">Copy All</button>
+            </div>
+            <pre id="idx-sql" class="text-xs font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{% for idx in recs %}{{ idx.get('create_sql', '') }}
+{% endfor %}</pre>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Dropped Indexes -->
+    {% set drops = result.get('dropped_indexes', []) %}
+    {% if drops %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-red-200 dark:border-red-800 overflow-hidden">
+        <div class="px-4 py-3 border-b border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10">
+            <h3 class="text-sm font-semibold text-red-700 dark:text-red-300">Drop {{ drops | length }} Redundant Index(es)</h3>
+        </div>
+        <div class="p-4 space-y-2">
+            {% for idx_name in drops %}
+            <div class="flex items-center gap-2 text-sm">
+                <span class="text-red-500 font-bold">-</span>
+                <code class="text-red-600 dark:text-red-400 font-mono">DROP INDEX CONCURRENTLY IF EXISTS {{ idx_name }};</code>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- HOT Warnings -->
+    {% set hot_warnings = result.get('hot_warnings', []) %}
+    {% if hot_warnings %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-yellow-200 dark:border-yellow-800 overflow-hidden">
+        <div class="px-4 py-3 border-b border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/10">
+            <h3 class="text-sm font-semibold text-yellow-700 dark:text-yellow-300">HOT Update Warnings</h3>
+        </div>
+        <div class="p-4 space-y-2">
+            {% for w in hot_warnings %}
+            <div class="text-sm text-yellow-700 dark:text-yellow-400">
+                <span class="font-medium">{{ w.get('table', '') }}.{{ w.get('column', '') }}</span>:
+                {{ w.get('message', '') }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>

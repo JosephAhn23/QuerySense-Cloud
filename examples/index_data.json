@@ -1,0 +1,51 @@
+{
+    "Scans": [
+        {
+            "Name": "A",
+            "Sequential Cost": 35,
+            "Index Costs": [
+                {"Index": "1", "Cost": 15},
+                {"Index": "2", "Cost": null},
+                {"Index": "3", "Cost": 13},
+                {"Index": "4", "Cost": 21}
+            ]
+        },
+        {
+            "Name": "B",
+            "Sequential Cost": 22,
+            "Index Costs": [
+                {"Index": "1", "Cost": null},
+                {"Index": "2", "Cost": 14},
+                {"Index": "3", "Cost": 11},
+                {"Index": "4", "Cost": 11}
+            ]
+        },
+        {
+            "Name": "C",
+            "Sequential Cost": 37,
+            "Index Costs": [
+                {"Index": "1", "Cost": 12},
+                {"Index": "2", "Cost": null},
+                {"Index": "3", "Cost": 21},
+                {"Index": "4", "Cost": 18}
+            ]
+        },
+        {
+            "Name": "D",
+            "Sequential Cost": 42,
+            "Index Costs": [
+                {"Index": "1", "Cost": 27},
+                {"Index": "2", "Cost": 14},
+                {"Index": "3", "Cost": null},
+                {"Index": "4", "Cost": null}
+            ]
+        }
+    ],
+    "Existing Indexes": [],
+    "Index Write Overhead": {
+        "1": 10,
+        "2": 15,
+        "3": 12,
+        "4": 18
+    }
+}

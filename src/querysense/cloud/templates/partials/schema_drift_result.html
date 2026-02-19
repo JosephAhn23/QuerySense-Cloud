@@ -1,0 +1,112 @@
+<!-- Schema drift result — returned via HTMX POST -->
+<div class="space-y-4 animate-fade-in">
+
+    <!-- Status Banner -->
+    {% if drift_items %}
+    <div class="rounded-xl bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800 p-4">
+        <div class="flex items-center gap-3">
+            <svg class="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <div>
+                <p class="text-sm font-bold text-amber-800 dark:text-amber-300">Schema Drift Detected</p>
+                <p class="text-xs text-amber-600 dark:text-amber-400">{{ drift_items|length }} difference{{ 's' if drift_items|length > 1 else '' }} found between source and target.</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="rounded-xl bg-green-50 dark:bg-green-900/15 border border-green-200 dark:border-green-800 p-4">
+        <div class="flex items-center gap-3">
+            <svg class="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+                <p class="text-sm font-bold text-green-800 dark:text-green-300">Schemas Match</p>
+                <p class="text-xs text-green-600 dark:text-green-400">No drift detected between source and target environments.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Drift Items -->
+    {% if drift_items %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Differences</h3>
+            <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                {% set missing = drift_items|selectattr('drift_type', 'equalto', 'missing')|list|length %}
+                {% set extra = drift_items|selectattr('drift_type', 'equalto', 'extra')|list|length %}
+                {% set changed = drift_items|selectattr('drift_type', 'equalto', 'changed')|list|length %}
+                {% if missing %}<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Missing: {{ missing }}</span>{% endif %}
+                {% if extra %}<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Extra: {{ extra }}</span>{% endif %}
+                {% if changed %}<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Changed: {{ changed }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-slate-700">
+            {% for item in drift_items %}
+            <div class="px-5 py-3 border-l-4
+                {% if item.drift_type == 'missing' %}border-red-500 bg-red-50/30 dark:bg-red-900/5
+                {% elif item.drift_type == 'extra' %}border-blue-500 bg-blue-50/30 dark:bg-blue-900/5
+                {% else %}border-amber-500 bg-amber-50/30 dark:bg-amber-900/5{% endif %}">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        {% if item.drift_type == 'missing' %}
+                        <span class="badge-critical inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold">MISSING</span>
+                        {% elif item.drift_type == 'extra' %}
+                        <span class="badge-info inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold">EXTRA</span>
+                        {% else %}
+                        <span class="badge-warning inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold">CHANGED</span>
+                        {% endif %}
+                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ item.object_type }}</span>
+                        <code class="text-xs font-mono text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{{ item.name }}</code>
+                    </div>
+                    {% if item.impact %}
+                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ item.impact }}</span>
+                    {% endif %}
+                </div>
+                {% if item.drift_type == 'changed' and item.from_value and item.to_value %}
+                <div class="mt-2 flex items-center gap-2 text-xs">
+                    <span class="px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono line-through">{{ item.from_value }}</span>
+                    <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    <span class="px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-mono">{{ item.to_value }}</span>
+                </div>
+                {% endif %}
+                {% if item.description %}
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ item.description }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Auto-Fix SQL -->
+    {% if fix_sql %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Auto-Fix SQL</h3>
+            <button onclick="copyDriftFix()" class="copy-fix-btn">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                Copy Fix SQL
+            </button>
+        </div>
+        <pre id="drift-fix-sql" class="bg-gray-900 dark:bg-slate-900 text-green-400 rounded-lg p-4 text-sm font-mono overflow-x-auto styled-scrollbar">{{ fix_sql }}</pre>
+        <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+            Review carefully before applying. Run with <code class="bg-gray-100 dark:bg-slate-700 px-1 py-0.5 rounded">--dry-run</code> first.
+        </p>
+    </div>
+
+    <script>
+    function copyDriftFix() {
+        const sql = document.getElementById('drift-fix-sql').textContent;
+        navigator.clipboard.writeText(sql).then(() => {
+            const btn = event.target.closest('button');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!';
+            setTimeout(() => btn.innerHTML = orig, 2000);
+        });
+    }
+    </script>
+    {% endif %}
+
+    <!-- Competitor note -->
+    <div class="text-center text-xs text-gray-400 dark:text-gray-500 mt-4">
+        Liquibase Pro charges for schema drift detection. QuerySense gives it free, with auto-fix SQL.
+    </div>
+</div>

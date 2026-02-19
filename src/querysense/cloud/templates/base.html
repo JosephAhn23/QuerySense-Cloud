@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}QuerySense Cloud{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        brand: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b' },
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'slide-in': 'slideIn 0.3s ease-out',
+                        'scale-in': 'scaleIn 0.2s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        slideIn: { '0%': { opacity: '0', transform: 'translateX(-8px)' }, '100%': { opacity: '1', transform: 'translateX(0)' } },
+                        scaleIn: { '0%': { opacity: '0', transform: 'scale(0.95)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* ──────────────────────────────────────────────────────────── */
+        /* Design System: QuerySense Cloud v2                         */
+        /* ──────────────────────────────────────────────────────────── */
+
+        /* Badge Styles */
+        .badge-critical { background-color: #fee2e2; color: #991b1b; }
+        .badge-warning { background-color: #fef9c3; color: #854d0e; }
+        .badge-info { background-color: #dbeafe; color: #1e40af; }
+        .badge-success { background-color: #dcfce7; color: #166534; }
+        .badge-high { background-color: #ffedd5; color: #9a3412; }
+        .badge-medium { background-color: #fef9c3; color: #854d0e; }
+        .badge-low { background-color: #f0fdf4; color: #166534; }
+
+        /* Dark mode badges */
+        .dark .badge-critical { background-color: #7f1d1d; color: #fecaca; }
+        .dark .badge-warning { background-color: #713f12; color: #fef08a; }
+        .dark .badge-info { background-color: #1e3a5f; color: #93c5fd; }
+        .dark .badge-success { background-color: #14532d; color: #bbf7d0; }
+
+        /* Code Block */
+        .code-block {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8125rem;
+            line-height: 1.7;
+            border: 1px solid #1e293b;
+        }
+
+        /* Stat Card */
+        .stat-card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s ease;
+        }
+        .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+        .dark .stat-card { background: #1e293b; border-color: #334155; }
+
+        /* Severity Dots */
+        .severity-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .severity-dot.critical { background: #ef4444; }
+        .severity-dot.high { background: #f97316; }
+        .severity-dot.warning { background: #eab308; }
+        .severity-dot.medium { background: #eab308; }
+        .severity-dot.low { background: #22c55e; }
+        .severity-dot.info { background: #3b82f6; }
+
+        /* HTMX */
+        .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+        .htmx-request .htmx-indicator { opacity: 1; }
+        .htmx-request.htmx-indicator { opacity: 1; }
+
+        /* Navigation */
+        .nav-link { transition: all 0.15s ease; border-radius: 0.5rem; }
+        .nav-link:hover { background-color: #f3f4f6; }
+        .nav-link.active { background-color: #eef2ff; color: #4f46e5; font-weight: 600; }
+        .dark .nav-link:hover { background-color: #334155; }
+        .dark .nav-link.active { background-color: #312e81; color: #a5b4fc; }
+
+        /* Plan Tree */
+        .plan-node { border-left: 2px solid #e5e7eb; padding-left: 1rem; margin-left: 0.5rem; position: relative; }
+        .plan-node::before { content: ''; position: absolute; left: -2px; top: 0; width: 12px; height: 1px; background: #e5e7eb; }
+        .plan-node-root { border-left: none; margin-left: 0; padding-left: 0; }
+        .plan-node-root::before { display: none; }
+        .dark .plan-node { border-color: #475569; }
+        .dark .plan-node::before { background: #475569; }
+
+        .plan-node-badge { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; }
+        .plan-node-badge.seq-scan { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .plan-node-badge.index-scan { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .plan-node-badge.hash-join { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+        .plan-node-badge.nested-loop { background: #fefce8; color: #854d0e; border: 1px solid #fde68a; }
+        .plan-node-badge.sort { background: #faf5ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+        .plan-node-badge.default { background: #f9fafb; color: #374151; border: 1px solid #e5e7eb; }
+
+        /* Progress Bar */
+        .progress-bar { height: 6px; border-radius: 3px; background: #e5e7eb; overflow: hidden; }
+        .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease-out; }
+        .dark .progress-bar { background: #334155; }
+
+        /* Flamegraph bar */
+        .flame-bar { height: 28px; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 0.75rem; font-weight: 500; transition: all 0.15s; cursor: default; position: relative; overflow: hidden; }
+        .flame-bar:hover { filter: brightness(1.1); transform: scaleY(1.1); }
+        .flame-bar .flame-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; z-index: 1; }
+
+        /* Pulse animation for live indicators */
+        .pulse-live { animation: pulseLive 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulseLive { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* Glass card */
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .dark .glass-card { background: rgba(30, 41, 59, 0.8); border-color: rgba(71, 85, 105, 0.3); }
+
+        /* Gradient text */
+        .gradient-text { background: linear-gradient(135deg, #4f46e5, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+        /* Tab styles */
+        .tab-btn { padding: 0.625rem 1rem; font-size: 0.875rem; font-weight: 500; color: #6b7280; border-bottom: 2px solid transparent; transition: all 0.15s; cursor: pointer; }
+        .tab-btn:hover { color: #374151; }
+        .tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+        .dark .tab-btn { color: #9ca3af; }
+        .dark .tab-btn:hover { color: #e5e7eb; }
+        .dark .tab-btn.active { color: #a5b4fc; border-bottom-color: #a5b4fc; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Tooltip */
+        [data-tooltip] { position: relative; }
+        [data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+            padding: 0.25rem 0.5rem; background: #1f2937; color: white; font-size: 0.75rem;
+            border-radius: 0.375rem; white-space: nowrap; z-index: 50; margin-bottom: 4px;
+            animation: scaleIn 0.15s ease-out;
+        }
+
+        /* Command palette overlay */
+        #cmd-palette-overlay { backdrop-filter: blur(4px); }
+
+        /* Smooth scrollbar */
+        .styled-scrollbar::-webkit-scrollbar { width: 6px; }
+        .styled-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .styled-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        .styled-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        .dark .styled-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; }
+
+        /* Focus ring */
+        .focus-ring:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; border-radius: 0.375rem; }
+
+        /* Insight card */
+        .insight-card { border-radius: 0.75rem; padding: 1rem; background: linear-gradient(135deg, rgba(99,102,241,0.05), rgba(124,58,237,0.05)); border: 1px solid rgba(99,102,241,0.15); }
+        .dark .insight-card { background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(124,58,237,0.1)); border-color: rgba(99,102,241,0.25); }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="h-full bg-gray-50 dark:bg-slate-900 font-sans text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div class="min-h-full flex">
+        <!-- Mobile Menu Overlay -->
+        <div id="mobile-overlay" class="fixed inset-0 bg-gray-900/50 z-40 lg:hidden hidden" onclick="toggleMobileMenu()"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 z-50 flex flex-col w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
+            <div class="flex items-center h-14 px-5 border-b border-gray-200 dark:border-slate-700">
+                <a href="/" class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-lg flex items-center justify-center shadow-sm shadow-brand-500/25">
+                        <span class="text-white font-bold text-sm">QS</span>
+                    </div>
+                    <span class="text-base font-bold text-gray-900 dark:text-white">QuerySense</span>
+                </a>
+                <button class="lg:hidden ml-auto p-1 text-gray-400 hover:text-gray-600" onclick="toggleMobileMenu()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Search / Cmd+K trigger -->
+            <div class="px-3 py-3">
+                <button onclick="openCommandPalette()" class="w-full flex items-center px-3 py-2 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 transition-colors focus-ring">
+                    <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <span class="flex-1 text-left">Search...</span>
+                    <kbd class="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-gray-200 dark:bg-slate-700 text-[10px] font-mono font-medium text-gray-500 dark:text-gray-400">Ctrl K</kbd>
+                </button>
+            </div>
+
+            <nav class="flex-1 px-3 space-y-0.5 overflow-y-auto styled-scrollbar">
+                {% if user is defined and user %}
+                <a href="/" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path == '/' %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    Dashboard
+                </a>
+
+                <div class="pt-4 pb-1">
+                    <p class="px-3 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Analysis</p>
+                </div>
+                <a href="/plans" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/plans') and not request.url.path.startswith('/plans/upload') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Plans
+                </a>
+                <a href="/plans/upload" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path == '/plans/upload' %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    Upload Plan
+                </a>
+                <a href="/causal" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/causal') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                    Root Cause
+                </a>
+                <a href="/rewrite" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/rewrite') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    SQL Rewriter
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400">New</span>
+                </a>
+
+                <a href="/migrations" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/migrations') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    Migrations
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">New</span>
+                </a>
+
+                <a href="/schema/drift" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/schema') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Schema Drift
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">Free</span>
+                </a>
+
+                <a href="/advisor" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/advisor') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                    Advisor
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400">PMM</span>
+                </a>
+
+                <a href="/index" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/index') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                    Index Advisor
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400">CP-SAT</span>
+                </a>
+
+                <a href="/ha" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/ha') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    HA Cluster
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">New</span>
+                </a>
+
+                <a href="/locks" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/locks') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    Lock Monitor
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">New</span>
+                </a>
+
+                <a href="/growth" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/growth') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    Table Growth
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">New</span>
+                </a>
+                <a href="/buffers" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/buffers') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                    I/O Heatmap
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">New</span>
+                </a>
+                <a href="/index-design" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/index-design') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+                    Index Design
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">New</span>
+                </a>
+                <a href="/workbook" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/workbook') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    Workbook
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">New</span>
+                </a>
+                <a href="/cost-model" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/cost-model') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Cost Model
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">New</span>
+                </a>
+                <a href="/dependencies" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/dependencies') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    Dependencies
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">New</span>
+                </a>
+                <a href="/obfuscate" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/obfuscate') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    PII Obfuscator
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">New</span>
+                </a>
+
+                <div class="pt-4 pb-1">
+                    <p class="px-3 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Prevention</p>
+                </div>
+                <a href="/watch" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/watch') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    Watch
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">Live</span>
+                </a>
+                <a href="/regressions" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/regressions') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>
+                    Regressions
+                </a>
+                <a href="/upgrade" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/upgrade') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Upgrade Validator
+                </a>
+
+                <div class="pt-4 pb-1">
+                    <p class="px-3 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Compliance</p>
+                </div>
+                <a href="/compliance" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path.startswith('/compliance') %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    Compliance
+                </a>
+
+                <div class="pt-4 pb-1">
+                    <p class="px-3 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Settings</p>
+                </div>
+                <a href="/settings/api-keys" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path == '/settings/api-keys' %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    API Keys
+                </a>
+                <a href="/settings/billing" class="nav-link flex items-center px-3 py-2 text-sm {% if request.url.path == '/settings/billing' %}active{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                    Billing
+                </a>
+                {% else %}
+                <a href="/login" class="nav-link flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                    Sign In
+                </a>
+                <a href="/pricing" class="nav-link flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                    <svg class="w-4.5 h-4.5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Pricing
+                </a>
+                {% endif %}
+            </nav>
+
+            <!-- User + Dark Mode Toggle -->
+            <div class="p-3 border-t border-gray-200 dark:border-slate-700 space-y-2">
+                <!-- Dark Mode Toggle -->
+                <button onclick="toggleDarkMode()" class="w-full flex items-center px-3 py-2 text-sm text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                    <svg id="dark-icon" class="w-4 h-4 mr-3 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <svg id="light-icon" class="w-4 h-4 mr-3 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    <span class="dark:hidden">Dark Mode</span>
+                    <span class="hidden dark:inline">Light Mode</span>
+                </button>
+
+                {% if user is defined and user %}
+                <div class="flex items-center px-3 py-2">
+                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0">
+                        <span class="text-xs font-semibold text-white">{{ user.display_name[:1] | upper }}</span>
+                    </div>
+                    <div class="ml-2.5 flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ user.display_name }}</p>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ user.email }}</p>
+                    </div>
+                    <a href="/logout" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" title="Sign out">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <div class="lg:pl-64 flex flex-col flex-1 min-h-screen">
+            <!-- Top bar (mobile) -->
+            <header class="lg:hidden flex items-center h-14 px-4 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+                <button onclick="toggleMobileMenu()" class="p-2 -ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <a href="/" class="flex items-center space-x-2 ml-3">
+                    <div class="w-7 h-7 bg-gradient-to-br from-brand-500 to-brand-700 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-xs">QS</span>
+                    </div>
+                    <span class="text-base font-bold text-gray-900 dark:text-white">QuerySense</span>
+                </a>
+                <button onclick="toggleDarkMode()" class="ml-auto p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                </button>
+            </header>
+
+            <main class="flex-1 px-4 py-6 sm:px-6 lg:px-8 animate-fade-in">
+                {% block content %}{% endblock %}
+            </main>
+
+            <footer class="border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 mt-auto">
+                <div class="px-4 py-3 sm:px-6 lg:px-8">
+                    <p class="text-center text-xs text-gray-400 dark:text-gray-500">
+                        QuerySense Cloud v{{ qs_version | default("0.5.2") }} &mdash;
+                        Catch slow queries before they ship.
+                    </p>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Command Palette -->
+    <div id="cmd-palette-overlay" class="fixed inset-0 z-[100] bg-gray-900/60 hidden" onclick="closeCommandPalette()">
+        <div class="flex items-start justify-center pt-[15vh]" onclick="event.stopPropagation()">
+            <div class="w-full max-w-lg bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-600 overflow-hidden animate-scale-in">
+                <div class="flex items-center px-4 border-b border-gray-200 dark:border-slate-700">
+                    <svg class="w-4 h-4 text-gray-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input id="cmd-palette-input" type="text" placeholder="Type a command or search..."
+                           class="w-full py-3 text-sm bg-transparent border-0 outline-none text-gray-900 dark:text-white placeholder-gray-400"
+                           oninput="filterCommands(this.value)">
+                    <kbd class="text-[10px] font-mono text-gray-400 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">ESC</kbd>
+                </div>
+                <div id="cmd-palette-results" class="max-h-64 overflow-y-auto py-2 styled-scrollbar">
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/" data-keywords="dashboard home overview">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Dashboard</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/plans/upload" data-keywords="upload analyze plan explain">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Analyze New Plan</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/plans" data-keywords="plans library list search">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Plan Library</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/causal" data-keywords="causal root cause analysis diagnose">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Root Cause Analysis</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/rewrite" data-keywords="rewrite optimize sql query not in exists join union">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">SQL Rewriter</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/migrations" data-keywords="migration safety check rollback ddl alter drop">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Migration Safety</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/schema/drift" data-keywords="schema drift compare sync production staging column index">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Schema Drift</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/advisor" data-keywords="advisor checks framework pmm percona bloat wraparound vacuum replication">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Advisor Framework</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/index" data-keywords="index advisor cp-sat constraint programming ortools optimal btree">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">CP-SAT Index Advisor</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/ha" data-keywords="ha cluster replication patroni wal checkpoint lag primary replica">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">HA Cluster Monitor</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/locks" data-keywords="lock monitor blocking deadlock contention pg_locks">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Lock Monitor</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/growth" data-keywords="growth table size trends bloat capacity projection disk">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Table Growth</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/buffers" data-keywords="buffers io heatmap cache hit read disk shared blocks pganalyze">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">I/O Heatmap (BUFFERS)</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/index-design" data-keywords="index design advisor cardinality multi-column composite sort elimination covering">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Index Design Advisor</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/workbook" data-keywords="workbook tuning query optimization parameter variant compare migration pganalyze">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Query Tuning Workbook</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/cost-model" data-keywords="cost model calibrator random_page_cost seq_page_cost ssd hdd nvme storage planner">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Cost Model Calibrator</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/dependencies" data-keywords="dependencies correlation extended statistics create functional dependency column pair">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Column Dependencies</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/obfuscate" data-keywords="pii obfuscate mask redact email ssn credit card phone ip privacy security soc2">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">PII Obfuscator</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/watch" data-keywords="watch monitor regression real-time">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Watch Daemon</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/compliance" data-keywords="compliance pci hipaa gdpr sox check">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Compliance</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="#" data-keywords="dark mode light theme toggle" onclick="toggleDarkMode(); closeCommandPalette(); return false;">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">Toggle Dark Mode</span>
+                    </div>
+                    <div class="cmd-item px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer flex items-center text-sm" data-href="/settings/api-keys" data-keywords="api keys settings configuration">
+                        <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                        <span class="text-gray-700 dark:text-gray-300">API Keys</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ── Dark Mode ──────────────────────────────────────────────
+    function toggleDarkMode() {
+        const html = document.getElementById('html-root');
+        html.classList.toggle('dark');
+        localStorage.setItem('qs-dark-mode', html.classList.contains('dark') ? 'dark' : 'light');
+    }
+    // Restore dark mode preference
+    (function() {
+        const pref = localStorage.getItem('qs-dark-mode');
+        if (pref === 'dark' || (!pref && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.getElementById('html-root').classList.add('dark');
+        }
+    })();
+
+    // ── Mobile Menu ───────────────────────────────────────────
+    function toggleMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobile-overlay');
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+
+    // ── Command Palette ────────────────────────────────────────
+    function openCommandPalette() {
+        const overlay = document.getElementById('cmd-palette-overlay');
+        overlay.classList.remove('hidden');
+        const input = document.getElementById('cmd-palette-input');
+        input.value = '';
+        input.focus();
+        filterCommands('');
+    }
+    function closeCommandPalette() {
+        document.getElementById('cmd-palette-overlay').classList.add('hidden');
+    }
+    function filterCommands(query) {
+        const items = document.querySelectorAll('.cmd-item');
+        const q = query.toLowerCase();
+        items.forEach(item => {
+            const keywords = (item.dataset.keywords || '') + ' ' + item.textContent;
+            item.style.display = keywords.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+K or Cmd+K to open command palette
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            openCommandPalette();
+        }
+        // Escape to close
+        if (e.key === 'Escape') {
+            closeCommandPalette();
+        }
+        // Enter in command palette to navigate
+        if (e.key === 'Enter' && !document.getElementById('cmd-palette-overlay').classList.contains('hidden')) {
+            const visible = [...document.querySelectorAll('.cmd-item')].filter(i => i.style.display !== 'none');
+            if (visible.length > 0) {
+                const href = visible[0].dataset.href;
+                if (href && href !== '#') window.location.href = href;
+                closeCommandPalette();
+            }
+        }
+    });
+    // Click to navigate in command palette
+    document.querySelectorAll('.cmd-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const href = item.dataset.href;
+            if (href && href !== '#') window.location.href = href;
+            closeCommandPalette();
+        });
+    });
+
+    // ── Tab switching helper ──────────────────────────────────
+    function initTabs(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const btns = container.querySelectorAll('.tab-btn');
+        const contents = container.querySelectorAll('.tab-content');
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                btns.forEach(b => b.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                const target = document.getElementById(btn.dataset.tab);
+                if (target) target.classList.add('active');
+            });
+        });
+    }
+
+    // ── Copy to clipboard ─────────────────────────────────────
+    function copyToClipboard(text, btn) {
+        navigator.clipboard.writeText(text).then(() => {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+            setTimeout(() => { btn.innerHTML = orig; }, 1500);
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Persistent UI State (Fix Percona's biggest complaint)
+    // ═══════════════════════════════════════════════════════════
+
+    const QS = {
+        // Get a stored preference with fallback
+        get(key, fallback) {
+            try {
+                const v = localStorage.getItem(`querysense.${key}`);
+                return v !== null ? JSON.parse(v) : fallback;
+            } catch { return fallback; }
+        },
+        // Set a preference
+        set(key, value) {
+            try { localStorage.setItem(`querysense.${key}`, JSON.stringify(value)); } catch {}
+        },
+        // Remember column sorting state
+        saveSort(tableId, field, direction) {
+            this.set(`sort.${tableId}`, { field, direction });
+        },
+        getSort(tableId) {
+            return this.get(`sort.${tableId}`, null);
+        },
+        // Remember panel expand/collapse
+        togglePanel(panelId) {
+            const panels = this.get('panels', {});
+            panels[panelId] = !panels[panelId];
+            this.set('panels', panels);
+            return panels[panelId];
+        },
+        isPanelOpen(panelId, defaultOpen) {
+            const panels = this.get('panels', {});
+            return panelId in panels ? panels[panelId] : (defaultOpen !== false);
+        },
+    };
+
+    // Auto-restore collapsible details elements
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('details[data-persist]').forEach(el => {
+            const id = el.dataset.persist;
+            if (QS.get(`details.${id}`, false)) el.open = true;
+            el.addEventListener('toggle', () => QS.set(`details.${id}`, el.open));
+        });
+    });
+
+    // ── Sortable table columns ──────────────────────────────────
+    function makeSortable(tableId) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const headers = table.querySelectorAll('th[data-sort]');
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        const saved = QS.getSort(tableId);
+
+        headers.forEach(th => {
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', () => {
+                const field = th.dataset.sort;
+                const rows = [...tbody.querySelectorAll('tr')];
+                const idx = [...th.parentElement.children].indexOf(th);
+                const currentDir = th.dataset.dir || 'asc';
+                const newDir = currentDir === 'asc' ? 'desc' : 'asc';
+
+                headers.forEach(h => { h.dataset.dir = ''; h.classList.remove('text-brand-600'); });
+                th.dataset.dir = newDir;
+                th.classList.add('text-brand-600');
+
+                rows.sort((a, b) => {
+                    const aVal = a.children[idx]?.textContent?.trim() || '';
+                    const bVal = b.children[idx]?.textContent?.trim() || '';
+                    const aNum = parseFloat(aVal), bNum = parseFloat(bVal);
+                    const cmp = (!isNaN(aNum) && !isNaN(bNum)) ? aNum - bNum : aVal.localeCompare(bVal);
+                    return newDir === 'asc' ? cmp : -cmp;
+                });
+
+                rows.forEach(r => tbody.appendChild(r));
+                QS.saveSort(tableId, field, newDir);
+            });
+
+            // Restore saved sort
+            if (saved && saved.field === th.dataset.sort) {
+                th.dataset.dir = saved.direction === 'desc' ? 'asc' : 'desc';
+                th.click();
+            }
+        });
+    }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

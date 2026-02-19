@@ -1,0 +1,80 @@
+# QuerySense Helm Chart Values
+# Override these for your environment
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/querysense/querysense
+  tag: "0.9.0"
+  pullPolicy: IfNotPresent
+
+operator:
+  enabled: true
+  name: querysense-operator
+  replicas: 1
+  image: ghcr.io/querysense/querysense-operator
+  tag: "0.9.0"
+
+web:
+  enabled: true
+  port: 8000
+  replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+worker:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+database:
+  # External PostgreSQL connection
+  host: ""
+  port: 5432
+  name: querysense
+  user: querysense
+  existingSecret: ""  # Secret with 'password' key
+
+otel:
+  enabled: false
+  endpoint: "http://otel-collector:4317"
+
+audit:
+  enabled: true
+  logFile: /var/log/querysense/audit.log
+  retention: 90  # days
+
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  name: querysense
+
+ingress:
+  enabled: false
+  className: nginx
+  hosts:
+    - host: querysense.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+metrics:
+  enabled: true
+  port: 9090
+  serviceMonitor:
+    enabled: false
+    interval: 30s

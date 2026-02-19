@@ -1,0 +1,31 @@
+---
+work_in_progress: true
+log_classification: V100
+log_title: Unique constraint violation
+log_category: constraint-violations
+collector_key: UNIQUE_CONSTRAINT_VIOLATION
+tooltip: Unique constraint violated by INSERT/UPDATE
+urgency: low
+sqlstate: "23505 (Class 23 — Integrity Constraint Violation: unique_violation)"
+color: "#8A2BE2"
+---
+
+**Example Postgres Log Output:**
+
+```
+ERROR: duplicate key value violates unique constraint "test_constraint"
+DETAIL: Key (b, c)=(12345, mysecretdata) already exists.
+STATEMENT: INSERT INTO a (b, c) VALUES ($1,$2) RETURNING id
+```
+
+**Explanation:**
+
+...
+
+**Recommended Action:**
+
+...
+
+**Learn More:**
+
+No additional resources available.

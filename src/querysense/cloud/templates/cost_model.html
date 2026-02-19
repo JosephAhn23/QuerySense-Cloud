@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Cost Model Calibrator — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Cost Model Calibrator</h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 uppercase tracking-wider">New</span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+            Detect storage type and calibrate <code class="font-mono text-brand-600">random_page_cost</code>,
+            <code class="font-mono text-brand-600">seq_page_cost</code>, and
+            <code class="font-mono text-brand-600">effective_io_concurrency</code> for your actual hardware.
+        </p>
+    </div>
+
+    <!-- DSN Input -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+        <form hx-post="/cost-model/audit" hx-target="#cost-results" hx-indicator="#cost-spinner">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                PostgreSQL Connection String
+            </label>
+            <input name="dsn" type="text" required placeholder="postgresql://user:pass@host:5432/dbname"
+                class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100">
+            <div class="mt-4 flex items-center gap-3">
+                <button type="submit"
+                    class="inline-flex items-center px-5 py-2.5 rounded-lg bg-brand-600 text-white font-medium text-sm hover:bg-brand-700 transition-colors shadow-sm">
+                    Audit Cost Model
+                </button>
+                <span id="cost-spinner" class="htmx-indicator text-sm text-gray-500">Connecting...</span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div id="cost-results"></div>
+
+    <!-- How It Works -->
+    <details class="mt-6">
+        <summary class="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-brand-600">
+            Why random_page_cost matters
+        </summary>
+        <div class="mt-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 text-sm text-gray-600 dark:text-gray-300 space-y-2">
+            <p><strong>The problem:</strong> PostgreSQL defaults <code class="font-mono">random_page_cost=4.0</code>,
+            which means random I/O (index scans) is priced at 4x sequential I/O. This was correct for HDDs
+            where seeks took ~10ms vs 0.25ms for sequential reads.</p>
+            <p><strong>On SSDs:</strong> Random and sequential reads are nearly the same speed.
+            With <code class="font-mono">random_page_cost=4.0</code>, the planner avoids perfectly good
+            indexes because it thinks they're 4x more expensive than they actually are.</p>
+            <p><strong>The fix:</strong> Set <code class="font-mono">random_page_cost=1.1</code> on SSDs.
+            This alone can speed up queries 2-10x by encouraging index scans.</p>
+        </div>
+    </details>
+</div>
+{% endblock %}

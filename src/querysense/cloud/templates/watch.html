@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block title %}Watch — QuerySense Cloud{% endblock %}
+
+{% block content %}
+<div class="sm:flex sm:items-center sm:justify-between mb-8">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Plan Regression Watch</h1>
+        <p class="mt-1 text-sm text-gray-500">Real-time plan regression detection with automated severity scoring and alerting.</p>
+    </div>
+    <div class="mt-4 sm:mt-0">
+        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800">
+            <span class="w-2 h-2 rounded-full bg-green-500 pulse-live mr-2"></span>
+            Monitoring Active
+        </span>
+    </div>
+</div>
+
+<!-- Status Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <div class="stat-card">
+        <div class="flex items-center justify-between">
+            <p class="text-sm text-gray-500">Data Source</p>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">pg_stat</span>
+        </div>
+        <p class="text-lg font-semibold text-gray-900 mt-1">pg_stat_statements</p>
+        <p class="text-xs text-gray-400 mt-1">+ pg_store_plans fallback</p>
+    </div>
+    <div class="stat-card">
+        <p class="text-sm text-gray-500">Queries Monitored</p>
+        <p class="text-3xl font-bold text-gray-900 mt-1">{{ watch_stats.queries_monitored | default(0) }}</p>
+        <div class="progress-bar mt-2"><div class="progress-bar-fill bg-brand-500" style="width: {{ [watch_stats.queries_monitored | default(0), 100] | min }}%"></div></div>
+    </div>
+    <div class="stat-card">
+        <p class="text-sm text-gray-500">Regressions (24h)</p>
+        <p class="text-3xl font-bold text-red-600 mt-1">{{ watch_stats.regressions_24h | default(0) }}</p>
+        <p class="text-xs text-gray-400 mt-1">{% if watch_stats.regressions_24h | default(0) == 0 %}All clear{% else %}Needs attention{% endif %}</p>
+    </div>
+    <div class="stat-card">
+        <p class="text-sm text-gray-500">Alert Channels</p>
+        <p class="text-3xl font-bold text-gray-900 mt-1">{{ watch_stats.alert_channels | default(0) }}</p>
+        <div class="flex gap-2 mt-2">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">Slack</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">PagerDuty</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">Email</span>
+        </div>
+    </div>
+</div>
+
+<!-- Regression Trend Chart + Live Feed -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Chart -->
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-gray-900">Regression Severity Over Time</h2>
+            <div class="flex gap-2">
+                <button class="px-2 py-1 text-xs font-medium text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded" onclick="updateTrendPeriod('24h')">24h</button>
+                <button class="px-2 py-1 text-xs font-medium text-brand-600 bg-brand-50 rounded">7d</button>
+                <button class="px-2 py-1 text-xs font-medium text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded" onclick="updateTrendPeriod('30d')">30d</button>
+            </div>
+        </div>
+        <canvas id="regressionTrendChart" height="200"></canvas>
+    </div>
+
+    <!-- Live Feed -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-gray-900">Live Feed</h2>
+            <span class="w-2 h-2 rounded-full bg-green-500 pulse-live"></span>
+        </div>
+        <div class="divide-y divide-gray-100 max-h-[320px] overflow-y-auto"
+             hx-get="/api/watch/feed" hx-trigger="every 30s" hx-swap="innerHTML">
+            <!-- Feed items -->
+            <div class="px-4 py-3 slide-in">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <p class="text-xs text-gray-400">Just now</p>
+                        <p class="text-sm text-gray-700 mt-0.5">Monitoring started</p>
+                    </div>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">OK</span>
+                </div>
+            </div>
+            <div class="px-4 py-3">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <p class="text-xs text-gray-400">Awaiting first poll...</p>
+                        <p class="text-sm text-gray-500 mt-0.5">Connect a database to start watching</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs: Setup / Configuration / Severity Reference -->
+<div id="watchTabs" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="border-b border-gray-200 px-4 flex gap-1">
+        <button class="tab-btn active" data-tab="tab-setup">Quick Start</button>
+        <button class="tab-btn" data-tab="tab-config">Configuration</button>
+        <button class="tab-btn" data-tab="tab-severity">Severity Reference</button>
+        <button class="tab-btn" data-tab="tab-alerts">Alert Channels</button>
+    </div>
+
+    <!-- Setup Tab -->
+    <div id="tab-setup" class="tab-content active p-6">
+        <div class="space-y-5">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-sm">1</div>
+                <div class="ml-4 flex-1">
+                    <p class="text-sm font-medium text-gray-900">Start the watch daemon</p>
+                    <div class="code-block mt-2 relative group">querysense watch --dsn postgresql://localhost/mydb --interval 60
+<button onclick="copyToClipboard('querysense watch --dsn postgresql://localhost/mydb --interval 60', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                </div>
+            </div>
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-sm">2</div>
+                <div class="ml-4 flex-1">
+                    <p class="text-sm font-medium text-gray-900">Configure alerts (optional)</p>
+                    <div class="code-block mt-2 relative group">querysense watch --dsn postgresql://localhost/mydb \
+  --slack-webhook https://hooks.slack.com/services/... \
+  --pagerduty-key your-routing-key
+<button onclick="copyToClipboard('querysense watch --dsn postgresql://localhost/mydb --slack-webhook https://hooks.slack.com/services/... --pagerduty-key your-routing-key', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                </div>
+            </div>
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-sm">3</div>
+                <div class="ml-4 flex-1">
+                    <p class="text-sm font-medium text-gray-900">Tune sensitivity</p>
+                    <div class="code-block mt-2 relative group">querysense watch --threshold 3.0 --min-severity 50
+<button onclick="copyToClipboard('querysense watch --threshold 3.0 --min-severity 50', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Tab -->
+    <div id="tab-config" class="tab-content p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">Watch Configuration Parameters</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Parameter</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Default</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr><td class="px-4 py-2 text-sm font-mono text-gray-900">--dsn</td><td class="px-4 py-2 text-sm text-gray-500">required</td><td class="px-4 py-2 text-sm text-gray-500">PostgreSQL connection string</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-mono text-gray-900">--interval</td><td class="px-4 py-2 text-sm text-gray-500">300</td><td class="px-4 py-2 text-sm text-gray-500">Polling interval in seconds</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-mono text-gray-900">--threshold</td><td class="px-4 py-2 text-sm text-gray-500">2.0</td><td class="px-4 py-2 text-sm text-gray-500">Cost ratio threshold for regression detection</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-mono text-gray-900">--min-severity</td><td class="px-4 py-2 text-sm text-gray-500">30</td><td class="px-4 py-2 text-sm text-gray-500">Minimum severity score (0-100) to trigger alerts</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-mono text-gray-900">--top-queries</td><td class="px-4 py-2 text-sm text-gray-500">100</td><td class="px-4 py-2 text-sm text-gray-500">Number of top queries to monitor</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-mono text-gray-900">--source</td><td class="px-4 py-2 text-sm text-gray-500">pg_stat_statements</td><td class="px-4 py-2 text-sm text-gray-500">Data source: pg_stat_statements, pg_stat_monitor, pg_store_plans</td></tr>
+                    <tr><td class="px-4 py-2 text-sm font-mono text-gray-900">--state-file</td><td class="px-4 py-2 text-sm text-gray-500">.querysense/watch.json</td><td class="px-4 py-2 text-sm text-gray-500">Persistent state file for baselines</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Severity Tab -->
+    <div id="tab-severity" class="tab-content p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">Severity Scoring (0-100)</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Factor</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Weight</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">Execution time increase</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-24"><div class="progress-bar-fill bg-red-500" style="width: 30%"></div></div><span class="text-xs text-gray-500 ml-2">30%</span></td>
+                        <td class="px-4 py-3 text-sm text-gray-500">2x-10x+ slowdown detection</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">Row estimate accuracy</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-24"><div class="progress-bar-fill bg-orange-500" style="width: 20%"></div></div><span class="text-xs text-gray-500 ml-2">20%</span></td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Planner estimate drift</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">Scan method regression</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-24"><div class="progress-bar-fill bg-yellow-500" style="width: 20%"></div></div><span class="text-xs text-gray-500 ml-2">20%</span></td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Index Scan -> Seq Scan downgrades</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">Join method changes</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-24"><div class="progress-bar-fill bg-blue-500" style="width: 15%"></div></div><span class="text-xs text-gray-500 ml-2">15%</span></td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Hash Join -> Nested Loop regressions</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">Buffer/IO increase</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-24"><div class="progress-bar-fill bg-purple-500" style="width: 10%"></div></div><span class="text-xs text-gray-500 ml-2">10%</span></td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Buffer hit ratio degradation</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">Plan structure change</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-24"><div class="progress-bar-fill bg-gray-400" style="width: 5%"></div></div><span class="text-xs text-gray-500 ml-2">5%</span></td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Any structural plan modification</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-6 grid grid-cols-4 gap-3">
+            <div class="text-center p-3 rounded-lg bg-red-50 border border-red-100">
+                <p class="text-2xl font-bold text-red-700">80-100</p>
+                <p class="text-xs font-medium text-red-600">Critical</p>
+            </div>
+            <div class="text-center p-3 rounded-lg bg-orange-50 border border-orange-100">
+                <p class="text-2xl font-bold text-orange-700">50-79</p>
+                <p class="text-xs font-medium text-orange-600">High</p>
+            </div>
+            <div class="text-center p-3 rounded-lg bg-yellow-50 border border-yellow-100">
+                <p class="text-2xl font-bold text-yellow-700">30-49</p>
+                <p class="text-xs font-medium text-yellow-600">Medium</p>
+            </div>
+            <div class="text-center p-3 rounded-lg bg-green-50 border border-green-100">
+                <p class="text-2xl font-bold text-green-700">0-29</p>
+                <p class="text-xs font-medium text-green-600">Low/Info</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Tab -->
+    <div id="tab-alerts" class="tab-content p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">Alert Channel Configuration</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center mb-3">
+                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-4 h-4 text-purple-600" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"></path></svg>
+                    </div>
+                    <h4 class="text-sm font-semibold text-gray-900">Slack</h4>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">Rich regression alerts with plan diff details and severity badges.</p>
+                <div class="code-block text-xs">--slack-webhook URL</div>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center mb-3">
+                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                    </div>
+                    <h4 class="text-sm font-semibold text-gray-900">PagerDuty</h4>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">Trigger incidents for critical regressions (severity >= 80).</p>
+                <div class="code-block text-xs">--pagerduty-key KEY</div>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center mb-3">
+                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h4 class="text-sm font-semibold text-gray-900">Email</h4>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">SMTP-based email alerts with HTML-formatted regression reports.</p>
+                <div class="code-block text-xs">--email-to addr@example.com \
+--smtp-host smtp.example.com</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initTabs('watchTabs');
+
+    // Regression trend chart
+    const ctx = document.getElementById('regressionTrendChart');
+    if (!ctx) return;
+    const hours = Array.from({length: 24}, (_, i) => `${i}:00`);
+    const severityData = hours.map(() => Math.floor(Math.random() * 20));
+    const countData = hours.map(() => Math.floor(Math.random() * 3));
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: hours,
+            datasets: [{
+                label: 'Avg Severity',
+                data: severityData,
+                backgroundColor: severityData.map(v => v >= 80 ? '#ef4444' : v >= 50 ? '#f97316' : v >= 30 ? '#eab308' : '#22c55e'),
+                borderRadius: 3,
+                yAxisID: 'y',
+            }, {
+                label: 'Regressions',
+                data: countData,
+                type: 'line',
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99,102,241,0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2,
+                pointRadius: 2,
+                yAxisID: 'y1',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: { legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true, font: { size: 11 } } } },
+            scales: {
+                y: { position: 'left', beginAtZero: true, max: 100, title: { display: true, text: 'Severity', font: { size: 11 } }, ticks: { font: { size: 10 } }, grid: { color: '#f3f4f6' } },
+                y1: { position: 'right', beginAtZero: true, title: { display: true, text: 'Count', font: { size: 11 } }, ticks: { stepSize: 1, font: { size: 10 } }, grid: { drawOnChartArea: false } },
+                x: { ticks: { font: { size: 10 }, maxRotation: 45 }, grid: { display: false } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

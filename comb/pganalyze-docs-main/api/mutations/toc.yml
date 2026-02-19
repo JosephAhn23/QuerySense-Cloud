@@ -1,0 +1,8 @@
+- mount: api/mutations
+  items:
+  - name: addServer
+    href: api/mutations/addServer
+  - name: updateServer
+    href: api/mutations/updateServer
+  - name: deleteServer
+    href: api/mutations/deleteServer

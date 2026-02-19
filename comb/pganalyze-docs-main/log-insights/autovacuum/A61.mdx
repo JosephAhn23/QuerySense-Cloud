@@ -1,0 +1,36 @@
+---
+work_in_progress: true
+log_classification: A61
+log_title: TXID wraparound warning
+log_category: autovacuum
+collector_key: TXID_WRAPAROUND_WARNING
+tooltip: Database is at risk of forced shutdown due to overdue VACUUM
+urgency: high
+sqlstate: n/a
+---
+
+**Example Postgres Log Output:**
+
+```
+WARNING: database "template1" must be vacuumed within 938860 transactions
+HINT: To avoid a database shutdown, execute a database-wide VACUUM in that database.
+You might also need to commit or roll back old prepared transactions.
+```
+
+```
+WARNING: database with OID 16992 must be vacuumed within 532942 transactions
+HINT: To avoid a database shutdown, execute a database-wide VACUUM in that database.
+You might also need to commit or roll back old prepared transactions.
+```
+
+**Explanation:**
+
+...
+
+**Recommended Action:**
+
+...
+
+**Learn More:**
+
+No additional resources available.

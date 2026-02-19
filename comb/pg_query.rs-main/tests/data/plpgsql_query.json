@@ -1,0 +1,93 @@
+[
+  {
+    "PLpgSQL_function": {
+      "action": {
+        "PLpgSQL_stmt_block": {
+          "body": [
+            {
+              "PLpgSQL_stmt_execsql": {
+                "into": true,
+                "lineno": 5,
+                "sqlstmt": {
+                  "PLpgSQL_expr": {
+                    "parseMode": 0,
+                    "query": "SELECT details FROM t             WHERE col = input"
+                  }
+                },
+                "target": {
+                  "PLpgSQL_row": {
+                    "fields": [
+                      {
+                        "name": "result",
+                        "varno": 2
+                      }
+                    ],
+                    "lineno": 5,
+                    "refname": "(unnamed row)"
+                  }
+                }
+              }
+            },
+            {
+              "PLpgSQL_stmt_return": {
+                "expr": {
+                  "PLpgSQL_expr": {
+                    "parseMode": 2,
+                    "query": "result"
+                  }
+                },
+                "lineno": 6
+              }
+            }
+          ],
+          "lineno": 4
+        }
+      },
+      "datums": [
+        {
+          "PLpgSQL_var": {
+            "datatype": {
+              "PLpgSQL_type": {
+                "typname": "pg_catalog.int4"
+              }
+            },
+            "refname": "input"
+          }
+        },
+        {
+          "PLpgSQL_var": {
+            "datatype": {
+              "PLpgSQL_type": {
+                "typname": "pg_catalog.\"boolean\""
+              }
+            },
+            "refname": "found"
+          }
+        },
+        {
+          "PLpgSQL_var": {
+            "datatype": {
+              "PLpgSQL_type": {
+                "typname": "jsonb"
+              }
+            },
+            "lineno": 3,
+            "refname": "result"
+          }
+        },
+        {
+          "PLpgSQL_row": {
+            "fields": [
+              {
+                "name": "result",
+                "varno": 2
+              }
+            ],
+            "lineno": 5,
+            "refname": "(unnamed row)"
+          }
+        }
+      ]
+    }
+  }
+]

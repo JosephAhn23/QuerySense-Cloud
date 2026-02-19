@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}Pricing — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Hero -->
+    <div class="text-center mb-12">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Simple, transparent pricing</h1>
+        <p class="mt-3 text-lg text-gray-500 dark:text-gray-400">No surprises. No per-host billing. No paywalled rollbacks.</p>
+        <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">Core CLI and all 31 detection rules are free and open source — forever.</p>
+    </div>
+
+    <!-- Anti-competitor callout -->
+    <div class="mb-10 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-xl p-5 max-w-3xl mx-auto">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-brand-600 dark:text-brand-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+                <p class="text-sm font-semibold text-brand-800 dark:text-brand-300">Why we publish our pricing</p>
+                <p class="text-sm text-brand-700 dark:text-brand-400 mt-1">
+                    Some tools charge per-host, per-query, or per-metric — making your bill unpredictable.
+                    Others paywall basic features like rollbacks (Flyway) or <code class="text-brand-600 dark:text-brand-400">include</code> directives (Liquibase).
+                    QuerySense charges a flat monthly fee. What you see is what you pay.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pricing grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        <!-- Free -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-6 flex flex-col">
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Free</h3>
+                <div class="mt-2">
+                    <span class="text-4xl font-bold text-gray-900 dark:text-white">$0</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">/forever</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">For developers who ship fast</p>
+            </div>
+            <ul class="space-y-3 flex-1 text-sm text-gray-600 dark:text-gray-300">
+                {% set free_features = [
+                    "All 31 detection rules",
+                    "SQL rewrite engine (14 patterns)",
+                    "CLI + CI/CD gating",
+                    "Plan regression check",
+                    "Causal root-cause analysis",
+                    "SVG plan visualization",
+                    "Baseline management",
+                    "3 Cloud plans/day",
+                    "REST API (stateless endpoints)",
+                    "Offline — no DB connection needed",
+                ] %}
+                {% for feat in free_features %}
+                <li class="flex items-start">
+                    <svg class="w-4 h-4 text-green-500 dark:text-green-400 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                    {{ feat }}
+                </li>
+                {% endfor %}
+            </ul>
+            <a href="/register" class="mt-6 block w-full text-center px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                Get Started
+            </a>
+        </div>
+
+        <!-- Team -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl border-2 border-brand-500 p-6 flex flex-col relative">
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center px-3 py-1 rounded-full bg-brand-600 text-white text-xs font-semibold">
+                Most Popular
+            </div>
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Team</h3>
+                <div class="mt-2">
+                    <span class="text-4xl font-bold text-gray-900 dark:text-white">$29</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">/month flat</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">For teams who prevent regressions</p>
+            </div>
+            <ul class="space-y-3 flex-1 text-sm text-gray-600 dark:text-gray-300">
+                {% set team_features = [
+                    "Everything in Free",
+                    "Unlimited Cloud plans",
+                    "Unlimited repos CI/CD",
+                    "Full policy engine",
+                    "GitHub App integration",
+                    "Watch daemon (live monitoring)",
+                    "Slack/PagerDuty alerts",
+                    "Team collaboration",
+                    "Upgrade validator",
+                    "Priority email support",
+                ] %}
+                {% for feat in team_features %}
+                <li class="flex items-start">
+                    <svg class="w-4 h-4 text-green-500 dark:text-green-400 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                    {{ feat }}
+                </li>
+                {% endfor %}
+            </ul>
+            <a href="/register" class="mt-6 block w-full text-center px-4 py-2.5 bg-brand-600 rounded-lg text-sm font-medium text-white hover:bg-brand-700 transition-colors">
+                Start Free Trial
+            </a>
+        </div>
+
+        <!-- Pro -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-6 flex flex-col">
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Pro</h3>
+                <div class="mt-2">
+                    <span class="text-4xl font-bold text-gray-900 dark:text-white">$99</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">/month flat</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">For compliance-conscious orgs</p>
+            </div>
+            <ul class="space-y-3 flex-1 text-sm text-gray-600 dark:text-gray-300">
+                {% set pro_features = [
+                    "Everything in Team",
+                    "All compliance packs (PCI, HIPAA, SOX)",
+                    "Upgrade validation (unlimited)",
+                    "SARIF audit reports",
+                    "Auto-PII detection",
+                    "pgAudit validation",
+                    "Workload profiling",
+                    "Advanced API (stored plans)",
+                ] %}
+                {% for feat in pro_features %}
+                <li class="flex items-start">
+                    <svg class="w-4 h-4 text-green-500 dark:text-green-400 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                    {{ feat }}
+                </li>
+                {% endfor %}
+            </ul>
+            <a href="/register" class="mt-6 block w-full text-center px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                Start Free Trial
+            </a>
+        </div>
+
+        <!-- Enterprise -->
+        <div class="bg-gray-900 dark:bg-slate-900 rounded-xl p-6 flex flex-col text-white">
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold">Enterprise</h3>
+                <div class="mt-2">
+                    <span class="text-4xl font-bold">Custom</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-400">For organizations with strict requirements</p>
+            </div>
+            <ul class="space-y-3 flex-1 text-sm text-gray-300">
+                {% set ent_features = [
+                    "Everything in Pro",
+                    "SSO / SAML",
+                    "Self-hosted deployment",
+                    "Custom compliance rules",
+                    "SLA guarantee",
+                    "Dedicated support engineer",
+                    "Volume licensing",
+                    "Air-gapped deployment",
+                ] %}
+                {% for feat in ent_features %}
+                <li class="flex items-start">
+                    <svg class="w-4 h-4 text-brand-400 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                    {{ feat }}
+                </li>
+                {% endfor %}
+            </ul>
+            <a href="mailto:support@querysense.dev" class="mt-6 block w-full text-center px-4 py-2.5 bg-white rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-100 transition-colors">
+                Contact Sales
+            </a>
+        </div>
+    </div>
+
+    <!-- Cost comparison: you vs. competitors -->
+    <div class="mt-16 max-w-4xl mx-auto">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white text-center mb-2">What you'd pay elsewhere</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-8">Public pricing as of February 2026. Estimates for a 5-person team with 20 monitored databases.</p>
+
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                <thead class="bg-gray-50 dark:bg-slate-900/50">
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tool</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Estimated Cost</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Pricing Model</th>
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Gotcha</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                    <tr class="bg-brand-50/50 dark:bg-brand-900/10">
+                        <td class="px-5 py-3 text-sm font-semibold text-brand-700 dark:text-brand-400">QuerySense Team</td>
+                        <td class="px-5 py-3 text-sm font-bold text-brand-700 dark:text-brand-400">$29/mo</td>
+                        <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">Flat fee per workspace</td>
+                        <td class="px-5 py-3 text-sm text-green-600 dark:text-green-400">None — what you see is what you pay</td>
+                    </tr>
+                    <tr>
+                        <td class="px-5 py-3 text-sm text-gray-900 dark:text-white">Datadog DBM</td>
+                        <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">~$1,400/mo</td>
+                        <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">Per-host + per-metric</td>
+                        <td class="px-5 py-3 text-sm text-red-600 dark:text-red-400">"Billing dashboards don't match pricing pages"</td>
+                    </tr>
+                    <tr>
+                        <td class="px-5 py-3 text-sm text-gray-900 dark:text-white">pganalyze</td>
+                        <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">~$745/mo</td>
+                        <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">$149/mo per 5 servers</td>
+                        <td class="px-5 py-3 text-sm text-red-600 dark:text-red-400">"Expensive for small businesses"</td>
+                    </tr>
+                    <tr>
+                        <td class="px-5 py-3 text-sm text-gray-900 dark:text-white">Liquibase Pro</td>
+                        <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">Contact sales</td>
+                        <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">Per-user enterprise</td>
+                        <td class="px-5 py-3 text-sm text-red-600 dark:text-red-400">Free-tier features being paywalled</td>
+                    </tr>
+                    <tr>
+                        <td class="px-5 py-3 text-sm text-gray-900 dark:text-white">Flyway Teams</td>
+                        <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">$497/yr per 10 schemas</td>
+                        <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">Per-schema</td>
+                        <td class="px-5 py-3 text-sm text-red-600 dark:text-red-400">Undo (rollback) requires paid tier</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Free forever pledge -->
+    <div class="mt-12 max-w-3xl mx-auto bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6 text-center">
+        <h3 class="text-lg font-bold text-green-800 dark:text-green-300 mb-2">Our Free-Forever Pledge</h3>
+        <p class="text-sm text-green-700 dark:text-green-400 leading-relaxed">
+            The QuerySense CLI, all 31 detection rules, the SQL rewrite engine, CI/CD gating, plan regression checks,
+            causal root-cause analysis, and the stateless API will <strong>never</strong> be paywalled.
+            We believe query optimization shouldn't require a credit card.
+            Cloud features (team collaboration, stored plans, watch daemon) are paid — that's how we sustain development.
+        </p>
+    </div>
+
+    <!-- FAQ -->
+    <div class="mt-16 max-w-3xl mx-auto">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">Frequently Asked Questions</h2>
+        <div class="space-y-6">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Is QuerySense open source?</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Yes. The CLI, analyzer, all 31 detection rules, and the 14-pattern SQL rewrite engine are MIT-licensed. Cloud features (dashboard, team collaboration, compliance packs) are available in paid tiers.</p>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Does QuerySense need access to my database?</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">No. Core analysis works entirely offline with EXPLAIN JSON output. Database connection is optional for enhanced analysis (index validation, statistics freshness) and the watch daemon. Your data never leaves your machine unless you use Cloud.</p>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Will features get paywalled later?</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">No. We saw how Liquibase paywalled <code>include</code> and how Flyway paywalled rollbacks. Our core tools stay free. New detection rules, rewrite patterns, and CLI features go into the free tier. Cloud collaboration features are paid.</p>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">How does QuerySense compare to pganalyze or Datadog?</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">pganalyze ($149+/mo) and Datadog DBM (per-host pricing) are production monitoring dashboards. QuerySense is a pre-production prevention tool. They're complementary: QuerySense catches issues before deployment, they monitor after. But if you only have budget for one, QuerySense covers more ground per dollar.</p>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Can I use QuerySense in air-gapped environments?</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Yes. The CLI is fully offline. Install the package, analyze EXPLAIN output, get results. No network calls, no telemetry, no cloud dependency. EverSQL can't do this. Neither can most SaaS monitoring tools.</p>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Do you have an API?</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Yes. Full REST API at <code>/api/v1/</code> with endpoints for analysis, SQL rewriting, plan comparison, and plan management. Stateless endpoints require no authentication. pgMustard users have been asking for this (GitHub issue #71) — we ship it by default.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

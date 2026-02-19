@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Regressions — QuerySense Cloud{% endblock %}
+
+{% block content %}
+<div class="sm:flex sm:items-center sm:justify-between mb-8">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Plan Regressions</h1>
+        <p class="mt-1 text-sm text-gray-500">Track and manage plan regressions detected by watch daemon and CI/CD pipelines.</p>
+    </div>
+    <div class="mt-4 sm:mt-0 flex gap-2">
+        <a href="/watch" class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+            <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Watch Config
+        </a>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-5 mb-8">
+    <div class="stat-card">
+        <div class="flex items-center justify-between">
+            <p class="text-sm text-gray-500">Active</p>
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 pulse-live"></span>
+        </div>
+        <p class="text-3xl font-bold text-red-600 mt-1">{{ regression_stats.active | default(0) }}</p>
+    </div>
+    <div class="stat-card">
+        <p class="text-sm text-gray-500">Resolved (30d)</p>
+        <p class="text-3xl font-bold text-green-600 mt-1">{{ regression_stats.resolved | default(0) }}</p>
+    </div>
+    <div class="stat-card">
+        <p class="text-sm text-gray-500">Locked Plans</p>
+        <p class="text-3xl font-bold text-brand-600 mt-1">{{ regression_stats.locked | default(0) }}</p>
+    </div>
+    <div class="stat-card">
+        <p class="text-sm text-gray-500">Avg Danger Score</p>
+        <p class="text-3xl font-bold text-gray-900 mt-1">{{ regression_stats.avg_danger | default(0) }}<span class="text-lg text-gray-400">/100</span></p>
+    </div>
+</div>
+
+<!-- Regression Timeline Chart -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold text-gray-900">Regression Timeline (30 days)</h2>
+    </div>
+    <canvas id="regressionTimeline" height="140"></canvas>
+</div>
+
+<!-- Tabs -->
+<div id="regressionTabs" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+    <div class="border-b border-gray-200 px-4 flex gap-1">
+        <button class="tab-btn active" data-tab="tab-active">Active Regressions</button>
+        <button class="tab-btn" data-tab="tab-transitions">Dangerous Transitions</button>
+        <button class="tab-btn" data-tab="tab-baselines">Baseline Management</button>
+        <button class="tab-btn" data-tab="tab-policy">Policy-as-Code</button>
+    </div>
+
+    <!-- Active Regressions Tab -->
+    <div id="tab-active" class="tab-content active">
+        <!-- Filters -->
+        <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-3 items-center">
+            <select class="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 focus:ring-brand-500 focus:border-brand-500">
+                <option>All Severities</option>
+                <option>Critical (80-100)</option>
+                <option>High (50-79)</option>
+                <option>Medium (30-49)</option>
+                <option>Low (0-29)</option>
+            </select>
+            <select class="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 focus:ring-brand-500 focus:border-brand-500">
+                <option>All Status</option>
+                <option>New</option>
+                <option>Acknowledged</option>
+                <option>Investigating</option>
+                <option>Resolved</option>
+            </select>
+            <input type="text" placeholder="Search queries..." class="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 focus:ring-brand-500 focus:border-brand-500 flex-1 min-w-[200px]">
+        </div>
+
+        <!-- Empty state with example -->
+        <div class="px-6 py-8 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No active regressions</h3>
+            <p class="mt-1 text-sm text-gray-500">Connect the watch daemon to start detecting plan regressions.</p>
+            <div class="mt-6 max-w-lg mx-auto">
+                <p class="text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">Example regression entry</p>
+                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden text-left">
+                    <div class="px-4 py-3 border-l-4 border-red-500 bg-red-50">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold badge-critical mr-2">92</span>
+                                <span class="text-sm font-medium text-gray-900">SELECT * FROM orders WHERE user_id = $1</span>
+                            </div>
+                            <span class="text-xs text-gray-400">2m ago</span>
+                        </div>
+                        <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                            <span>Index Scan -> Seq Scan</span>
+                            <span>Exec time: 2.1ms -> 847ms</span>
+                            <span>Rows: 1 -> 45,231</span>
+                        </div>
+                        <div class="mt-2 flex gap-2">
+                            <button class="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200">Acknowledge</button>
+                            <button class="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded hover:bg-blue-200">Investigate</button>
+                            <button class="px-2 py-1 text-xs font-medium text-gray-500 bg-gray-100 rounded hover:bg-gray-200">Snooze</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dangerous Transitions Tab -->
+    <div id="tab-transitions" class="tab-content p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">Dangerous Node Type Transitions</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transition</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Danger Score</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Severity</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Impact</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-gray-900">Index Only Scan -> Seq Scan</td>
+                        <td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold badge-critical">95</span></td>
+                        <td class="px-4 py-3 text-sm font-medium text-red-600">CRITICAL</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-20"><div class="progress-bar-fill bg-red-500" style="width: 95%"></div></div></td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-gray-900">Index Scan -> Seq Scan</td>
+                        <td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold badge-critical">90</span></td>
+                        <td class="px-4 py-3 text-sm font-medium text-red-600">CRITICAL</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-20"><div class="progress-bar-fill bg-red-500" style="width: 90%"></div></div></td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-gray-900">Bitmap Index Scan -> Seq Scan</td>
+                        <td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold badge-high">80</span></td>
+                        <td class="px-4 py-3 text-sm font-medium text-orange-600">HIGH</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-20"><div class="progress-bar-fill bg-orange-500" style="width: 80%"></div></div></td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-gray-900">Merge Join -> Nested Loop</td>
+                        <td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold badge-high">65</span></td>
+                        <td class="px-4 py-3 text-sm font-medium text-orange-600">HIGH</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-20"><div class="progress-bar-fill bg-orange-500" style="width: 65%"></div></div></td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-gray-900">Hash Join -> Nested Loop</td>
+                        <td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold badge-medium">60</span></td>
+                        <td class="px-4 py-3 text-sm font-medium text-yellow-600">MEDIUM</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-20"><div class="progress-bar-fill bg-yellow-500" style="width: 60%"></div></div></td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-gray-900">Parallel Seq Scan -> Seq Scan</td>
+                        <td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold badge-medium">50</span></td>
+                        <td class="px-4 py-3 text-sm font-medium text-yellow-600">MEDIUM</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-20"><div class="progress-bar-fill bg-yellow-500" style="width: 50%"></div></div></td>
+                    </tr>
+                    <tr class="bg-red-50">
+                        <td class="px-4 py-3 text-sm text-gray-900 font-medium italic">Locked plan violation</td>
+                        <td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold badge-critical">100</span></td>
+                        <td class="px-4 py-3 text-sm font-bold text-red-600">CRITICAL (auto)</td>
+                        <td class="px-4 py-3"><div class="progress-bar w-20"><div class="progress-bar-fill bg-red-600" style="width: 100%"></div></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Baseline Management Tab -->
+    <div id="tab-baselines" class="tab-content p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 mb-3">Record Baselines</h3>
+                <div class="code-block text-sm relative group">
+<span style="color:#6ee7b7"># Record current plans as baselines</span>
+querysense baseline update "plans/**/*.json"
+
+<span style="color:#6ee7b7"># Lock a critical query plan</span>
+querysense baseline lock get_user_by_id \
+  --reason "Production critical path"
+<button onclick="copyToClipboard('querysense baseline update &quot;plans/**/*.json&quot;', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-900 mb-3">Compare Against Baselines</h3>
+                <div class="code-block text-sm relative group">
+<span style="color:#6ee7b7"># Show plan changes vs baselines</span>
+querysense baseline diff "plans/**/*.json"
+
+<span style="color:#6ee7b7"># List all stored baselines</span>
+querysense baseline list
+<button onclick="copyToClipboard('querysense baseline diff &quot;plans/**/*.json&quot;', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Policy Tab -->
+    <div id="tab-policy" class="tab-content p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">Policy-as-Code (.querysense/policy.yml)</h3>
+        <div class="code-block relative group"><span style="color:#93c5fd">version:</span> "1.0"
+
+<span style="color:#6ee7b7"># Block deployments on high-severity regressions</span>
+<span style="color:#93c5fd">deny:</span>
+  - <span style="color:#93c5fd">rule:</span> no_regression
+    <span style="color:#93c5fd">severity:</span> high
+    <span style="color:#93c5fd">reason:</span> "High-severity plan regressions require DBA review"
+
+  - <span style="color:#93c5fd">rule:</span> no_seq_scan
+    <span style="color:#93c5fd">tables:</span> [transactions, payments]
+    <span style="color:#93c5fd">reason:</span> "Financial tables must use index scans"
+
+  - <span style="color:#93c5fd">rule:</span> max_cost
+    <span style="color:#93c5fd">threshold:</span> 100000
+    <span style="color:#93c5fd">reason:</span> "Queries exceeding cost 100K require DBA review"
+
+<span style="color:#93c5fd">baselines:</span>
+  <span style="color:#93c5fd">require_locked:</span> [get_user_by_id, process_payment]
+  <span style="color:#93c5fd">fail_on_any_locked_violation:</span> true
+<button onclick="copyToClipboard(this.parentElement.innerText, this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initTabs('regressionTabs');
+
+    // Timeline chart
+    const ctx = document.getElementById('regressionTimeline');
+    if (!ctx) return;
+    const days = Array.from({length: 30}, (_, i) => {
+        const d = new Date(); d.setDate(d.getDate() - 29 + i);
+        return d.toLocaleDateString('en', {month: 'short', day: 'numeric'});
+    });
+    const newData = days.map(() => Math.floor(Math.random() * 4));
+    const resolvedData = days.map(() => Math.floor(Math.random() * 3));
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: days,
+            datasets: [{
+                label: 'New Regressions',
+                data: newData,
+                backgroundColor: '#fca5a5',
+                borderColor: '#ef4444',
+                borderWidth: 1,
+                borderRadius: 2,
+            }, {
+                label: 'Resolved',
+                data: resolvedData.map(d => -d),
+                backgroundColor: '#86efac',
+                borderColor: '#22c55e',
+                borderWidth: 1,
+                borderRadius: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true, font: { size: 11 } } } },
+            scales: {
+                y: { beginAtZero: true, ticks: { font: { size: 10 }, callback: v => Math.abs(v) }, grid: { color: '#f3f4f6' } },
+                x: { ticks: { font: { size: 9 }, maxRotation: 45, autoSkip: true, maxTicksLimit: 15 }, grid: { display: false } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

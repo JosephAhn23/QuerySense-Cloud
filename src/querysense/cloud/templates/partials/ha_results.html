@@ -1,0 +1,121 @@
+<!-- HA cluster results partial (HTMX) -->
+<div class="space-y-4 mt-4 slide-in">
+    {% if error %}
+    <div class="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+        <p class="text-sm text-red-700 dark:text-red-400">{{ error }}</p>
+    </div>
+    {% else %}
+
+    <!-- Status Banner -->
+    {% if report.is_healthy %}
+    <div class="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
+        <div class="flex items-center">
+            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <h3 class="ml-2 text-lg font-bold text-green-800 dark:text-green-300">CLUSTER HEALTHY</h3>
+        </div>
+        <p class="mt-1 text-sm text-green-700 dark:text-green-400">
+            {{ report.member_count }} members, max lag {{ "%.1f"|format(report.max_lag_seconds) }}s
+        </p>
+    </div>
+    {% else %}
+    <div class="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+        <div class="flex items-center">
+            <svg class="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            <h3 class="ml-2 text-lg font-bold text-red-800 dark:text-red-300">CLUSTER DEGRADED</h3>
+        </div>
+        <p class="mt-1 text-sm text-red-700 dark:text-red-400">
+            {{ report.unhealthy_members }} unhealthy member(s), max lag {{ "%.1f"|format(report.max_lag_seconds) }}s
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Members -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Cluster Members ({{ report.members | length }})</h3>
+        </div>
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+            <thead class="bg-gray-50 dark:bg-slate-700/50">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">State</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Host</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Lag</th>
+                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Health</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
+                {% for m in report.members %}
+                <tr>
+                    <td class="px-4 py-2.5 text-sm font-medium">{{ m.name }}</td>
+                    <td class="px-4 py-2.5 text-sm">
+                        {% if m.role == 'leader' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-400">LEADER</span>
+                        {% elif m.role == 'sync_standby' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-400">SYNC</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-400">REPLICA</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2.5 text-sm">
+                        {% if m.state in ['running', 'streaming'] %}
+                            <span class="text-green-600">{{ m.state }}</span>
+                        {% else %}
+                            <span class="text-yellow-600">{{ m.state }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2.5 text-sm font-mono text-gray-600">{{ m.host }}:{{ m.port }}</td>
+                    <td class="px-4 py-2.5 text-sm text-right font-mono">{{ m.lag_human }}</td>
+                    <td class="px-4 py-2.5 text-sm text-center">
+                        {% if m.is_healthy %}
+                            <span class="text-green-500 text-lg">✓</span>
+                        {% else %}
+                            <span class="text-red-500 text-lg">✗</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- WAL Metrics -->
+    {% set wal = report.wal_metrics %}
+    {% if wal.checkpoints_timed + wal.checkpoints_req > 0 %}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 text-center">
+            <p class="text-xs text-gray-500 uppercase">Timed CP</p>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">{{ wal.checkpoints_timed }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 text-center">
+            <p class="text-xs text-gray-500 uppercase">Forced CP</p>
+            <p class="text-xl font-bold {% if wal.is_checkpoint_pressure %}text-yellow-600{% else %}text-gray-900 dark:text-white{% endif %}">{{ wal.checkpoints_req }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 text-center">
+            <p class="text-xs text-gray-500 uppercase">Forced Ratio</p>
+            <p class="text-xl font-bold {% if wal.is_checkpoint_pressure %}text-yellow-600{% else %}text-green-600{% endif %}">{{ "%.0f"|format(wal.checkpoint_request_ratio * 100) }}%</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 text-center">
+            <p class="text-xs text-gray-500 uppercase">WAL Size</p>
+            <p class="text-xl font-bold text-gray-900 dark:text-white">{{ "%.0f"|format(wal.wal_directory_size_mb) }}MB</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommendations -->
+    {% if report.recommendations %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Recommendations</h3>
+        <div class="space-y-2">
+            {% for rec in report.recommendations %}
+            <div class="text-sm {% if 'CRITICAL' in rec %}text-red-600{% elif 'WARNING' in rec %}text-yellow-600{% else %}text-gray-600 dark:text-gray-400{% endif %}">
+                {{ rec }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>

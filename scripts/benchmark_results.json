@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-02-18 14:58:17",
+  "results": [
+    {
+      "scale": 1000,
+      "total_time_seconds": 2.852320200006943,
+      "plans_per_second": 350.5917743728652,
+      "peak_memory_mb": 21.172040939331055,
+      "total_findings": 7234,
+      "findings_by_severity": {
+        "critical": 3159,
+        "warning": 3713,
+        "info": 362
+      },
+      "findings_by_rule": {
+        "BUFFER_ANALYSIS": 1120,
+        "COST_HOTSPOT": 952,
+        "PARALLEL_QUERY_NOT_USED": 854,
+        "SEQ_SCAN_LARGE_TABLE": 1154,
+        "SORT_AVOIDABLE_WITH_INDEX": 155,
+        "TIME_SKEW": 1496,
+        "TABLE_BLOAT": 155,
+        "WORK_MEM_TUNING": 118,
+        "PARTIAL_INDEX_OPPORTUNITY": 90,
+        "STALE_STATISTICS": 177,
+        "FOREIGN_KEY_WITHOUT_INDEX": 401,
+        "SQL_REWRITE_OPPORTUNITY": 307,
+        "CORRELATED_SUBQUERY": 101,
+        "SPILLING_TO_DISK": 154
+      },
+      "errors": 0
+    },
+    {
+      "scale": 10000,
+      "total_time_seconds": 28.941462100003264,
+      "plans_per_second": 345.52504519109533,
+      "peak_memory_mb": 207.52635097503662,
+      "total_findings": 72296,
+      "findings_by_severity": {
+        "critical": 31468,
+        "warning": 37148,
+        "info": 3680
+      },
+      "findings_by_rule": {
+        "BUFFER_ANALYSIS": 11234,
+        "COST_HOTSPOT": 9463,
+        "TIME_SKEW": 15058,
+        "PARALLEL_QUERY_NOT_USED": 8612,
+        "SEQ_SCAN_LARGE_TABLE": 11636,
+        "SPILLING_TO_DISK": 1431,
+        "WORK_MEM_TUNING": 1235,
+        "CORRELATED_SUBQUERY": 1071,
+        "FOREIGN_KEY_WITHOUT_INDEX": 3954,
+        "PARTIAL_INDEX_OPPORTUNITY": 919,
+        "STALE_STATISTICS": 1688,
+        "SQL_REWRITE_OPPORTUNITY": 2956,
+        "TABLE_BLOAT": 1573,
+        "SORT_AVOIDABLE_WITH_INDEX": 1460,
+        "EXCESSIVE_RESULT_WIDTH": 6
+      },
+      "errors": 0
+    },
+    {
+      "scale": 50000,
+      "total_time_seconds": 232.7594897999952,
+      "plans_per_second": 214.81401270884308,
+      "peak_memory_mb": 1031.3799715042114,
+      "total_findings": 359844,
+      "findings_by_severity": {
+        "critical": 156318,
+        "warning": 185448,
+        "info": 18078
+      },
+      "findings_by_rule": {
+        "BUFFER_ANALYSIS": 56247,
+        "COST_HOTSPOT": 47279,
+        "FOREIGN_KEY_WITHOUT_INDEX": 19712,
+        "TIME_SKEW": 73873,
+        "PARALLEL_QUERY_NOT_USED": 43619,
+        "SEQ_SCAN_LARGE_TABLE": 57953,
+        "SORT_AVOIDABLE_WITH_INDEX": 7475,
+        "SPILLING_TO_DISK": 7494,
+        "SQL_REWRITE_OPPORTUNITY": 15076,
+        "CORRELATED_SUBQUERY": 5026,
+        "TABLE_BLOAT": 7419,
+        "WORK_MEM_TUNING": 6428,
+        "PARTIAL_INDEX_OPPORTUNITY": 4251,
+        "STALE_STATISTICS": 7975,
+        "EXCESSIVE_RESULT_WIDTH": 17
+      },
+      "errors": 0
+    }
+  ]
+}

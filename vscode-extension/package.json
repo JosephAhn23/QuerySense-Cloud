@@ -1,0 +1,70 @@
+{
+  "name": "querysense",
+  "displayName": "QuerySense",
+  "description": "PostgreSQL query plan analysis — detect slow queries, get copy-paste fixes, right in your editor.",
+  "version": "0.1.0",
+  "publisher": "querysense",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Linters", "Other"],
+  "activationEvents": [
+    "onLanguage:sql",
+    "onLanguage:pgsql",
+    "onLanguage:plpgsql"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "querysense.analyze",
+        "title": "QuerySense: Analyze Selected SQL"
+      },
+      {
+        "command": "querysense.analyzeFile",
+        "title": "QuerySense: Analyze Plan from File"
+      }
+    ],
+    "configuration": {
+      "title": "QuerySense",
+      "properties": {
+        "querysense.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "QuerySense Cloud API URL"
+        },
+        "querysense.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for QuerySense Cloud (optional — needed for team features)"
+        },
+        "querysense.enableHover": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show QuerySense hints on hover over SQL"
+        },
+        "querysense.enableCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline analysis results as CodeLens"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "querysense.analyze",
+        "key": "ctrl+shift+q",
+        "mac": "cmd+shift+q",
+        "when": "editorTextFocus && editorLangId == sql"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.5.0"
+  }
+}

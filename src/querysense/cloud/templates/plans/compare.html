@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}Compare Plans - QuerySense Cloud{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center gap-2 mb-1">
+        <a href="/plans/{{ plan.id }}" class="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">&larr; Back to plan</a>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Compare Plans</h1>
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Before: <span class="font-medium text-gray-700 dark:text-gray-300">{{ plan.title }}</span>
+    </p>
+</div>
+
+<!-- Plan selector -->
+<div class="bg-white dark:bg-slate-800 shadow-sm rounded-xl border border-gray-200 dark:border-slate-700 p-6 mb-6">
+    <form method="GET" action="/plans/{{ plan.id }}/compare" class="flex items-end gap-4">
+        <div class="flex-1">
+            <label for="other_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Compare with (after):</label>
+            <select name="other_id" id="other_id"
+                    class="block w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-brand-500 sm:text-sm text-gray-900 dark:text-gray-100">
+                <option value="">Select a plan...</option>
+                {% for op in other_plans %}
+                <option value="{{ op.id }}" {% if selected_other_id == op.id %}selected{% endif %}>
+                    {{ op.title }} ({{ op.created_at }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit"
+                class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors">
+            Compare
+        </button>
+    </form>
+</div>
+
+{% if error %}
+<div class="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 mb-6">
+    <p class="text-sm text-red-700 dark:text-red-400">{{ error }}</p>
+</div>
+{% endif %}
+
+{% if comparison %}
+<!-- Comparison Summary Cards -->
+<div class="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-6">
+    <div class="stat-card dashboard-card-hover">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Fixed Issues</dt>
+        <dd class="mt-1 text-2xl font-bold text-green-600">{{ comparison.summary.fixed_count }}</dd>
+        <div class="mt-2 w-full bg-gray-200 dark:bg-slate-600 rounded-full h-1.5">
+            <div class="bg-green-500 h-1.5 rounded-full" style="width: {{ [comparison.summary.fixed_count / [comparison.summary.fixed_count + comparison.summary.new_count + comparison.summary.unchanged_count, 1] | max * 100, 100] | min }}%"></div>
+        </div>
+    </div>
+    <div class="stat-card dashboard-card-hover">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">New Issues</dt>
+        <dd class="mt-1 text-2xl font-bold text-red-600">{{ comparison.summary.new_count }}</dd>
+        <div class="mt-2 w-full bg-gray-200 dark:bg-slate-600 rounded-full h-1.5">
+            <div class="bg-red-500 h-1.5 rounded-full" style="width: {{ [comparison.summary.new_count / [comparison.summary.fixed_count + comparison.summary.new_count + comparison.summary.unchanged_count, 1] | max * 100, 100] | min }}%"></div>
+        </div>
+    </div>
+    <div class="stat-card dashboard-card-hover">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Net Change</dt>
+        <dd class="mt-1 text-2xl font-bold {% if comparison.summary.net_improvement > 0 %}text-green-600{% elif comparison.summary.net_improvement < 0 %}text-red-600{% else %}text-gray-600 dark:text-gray-400{% endif %}">
+            {% if comparison.summary.net_improvement > 0 %}+{% endif %}{{ comparison.summary.net_improvement }}
+        </dd>
+    </div>
+    <div class="stat-card dashboard-card-hover">
+        <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Unchanged</dt>
+        <dd class="mt-1 text-2xl font-bold text-gray-600 dark:text-gray-300">{{ comparison.summary.unchanged_count }}</dd>
+    </div>
+</div>
+
+<!-- Verdict Banner -->
+<div class="mb-6 rounded-xl p-4 border
+    {% if comparison.summary.is_improvement %}bg-green-50 dark:bg-green-900/15 border-green-200 dark:border-green-800
+    {% elif comparison.summary.net_improvement < 0 %}bg-red-50 dark:bg-red-900/15 border-red-200 dark:border-red-800
+    {% else %}bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700{% endif %}">
+    <div class="flex items-center gap-3">
+        {% if comparison.summary.is_improvement %}
+        <svg class="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div>
+            <p class="text-sm font-bold text-green-800 dark:text-green-300">Improvement</p>
+            <p class="text-xs text-green-600 dark:text-green-400">{{ comparison.summary.fixed_count }} issue(s) fixed in the newer plan.</p>
+        </div>
+        {% elif comparison.summary.net_improvement < 0 %}
+        <svg class="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <div>
+            <p class="text-sm font-bold text-red-800 dark:text-red-300">Regression</p>
+            <p class="text-xs text-red-600 dark:text-red-400">{{ comparison.summary.new_count }} new issue(s) detected.</p>
+        </div>
+        {% else %}
+        <svg class="w-6 h-6 text-gray-500 dark:text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+        <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-gray-200">No Net Change</p>
+            <p class="text-xs text-gray-600 dark:text-gray-400">Issue count is the same between plans.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Diff Viewer with View Modes -->
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-6">
+    <!-- Toolbar -->
+    <div class="diff-viewer-toolbar">
+        <button class="diff-mode-btn active" onclick="setDiffView('unified', this)" data-tooltip="Show all changes in one list">Unified</button>
+        <button class="diff-mode-btn" onclick="setDiffView('split', this)" data-tooltip="Show before/after side by side">Split</button>
+        <div class="ml-auto flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span> Fixed: {{ comparison.summary.fixed_count }}</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> New: {{ comparison.summary.new_count }}</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Changed: {{ comparison.changed_issues|length if comparison.changed_issues else 0 }}</span>
+        </div>
+    </div>
+
+    <!-- Unified View (default) -->
+    <div id="diff-unified" class="divide-y divide-gray-100 dark:divide-slate-700">
+        {% if comparison.fixed_issues %}
+        {% for f in comparison.fixed_issues %}
+        <div class="diff-line-added px-5 py-3 flex items-center gap-3">
+            <span class="badge-success inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold flex-shrink-0">FIXED</span>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ f.title }}</p>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400"><code>{{ f.rule_id }}</code> &middot; {{ f.severity }}</p>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if comparison.new_issues %}
+        {% for f in comparison.new_issues %}
+        <div class="diff-line-removed px-5 py-3">
+            <div class="flex items-center gap-3">
+                <span class="badge-critical inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold flex-shrink-0">NEW</span>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ f.title }}</p>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400"><code>{{ f.rule_id }}</code> &middot; {{ f.severity }}</p>
+                </div>
+            </div>
+            {% if f.suggestion %}
+            <div class="mt-2 ml-14">
+                <div class="flex items-center gap-2">
+                    <div class="code-block text-xs flex-1">{{ f.suggestion }}</div>
+                    <button onclick="copyToClipboard(this.previousElementSibling.innerText.trim(), this)" class="copy-fix-btn flex-shrink-0">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        Copy Fix
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if comparison.changed_issues %}
+        {% for ci in comparison.changed_issues %}
+        <div class="diff-line-context px-5 py-3">
+            <div class="flex items-center gap-3">
+                <span class="badge-warning inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold flex-shrink-0">CHANGED</span>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ ci.finding.title }}</p>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400">Status: {{ ci.status }}</p>
+                </div>
+            </div>
+            {% if ci.before_metrics and ci.after_metrics %}
+            <div class="mt-2 ml-14 grid grid-cols-2 gap-4">
+                <div class="rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 p-2">
+                    <p class="text-[10px] font-semibold text-red-700 dark:text-red-400 uppercase mb-1">Before</p>
+                    <div class="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                        {% for k, v in ci.before_metrics.items() %}
+                        <div><span class="font-medium">{{ k }}:</span> {{ v }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30 p-2">
+                    <p class="text-[10px] font-semibold text-green-700 dark:text-green-400 uppercase mb-1">After</p>
+                    <div class="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                        {% for k, v in ci.after_metrics.items() %}
+                        <div><span class="font-medium">{{ k }}:</span> {{ v }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if not comparison.fixed_issues and not comparison.new_issues and not comparison.changed_issues %}
+        <div class="px-5 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+            No differences found between the two plans.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Split View -->
+    <div id="diff-split" class="hidden">
+        <div class="grid grid-cols-2 divide-x divide-gray-200 dark:divide-slate-700">
+            <!-- Before column -->
+            <div>
+                <div class="px-4 py-2 bg-red-50 dark:bg-red-900/10 border-b border-gray-200 dark:border-slate-700">
+                    <p class="text-xs font-semibold text-red-700 dark:text-red-400">Before ({{ plan.title }})</p>
+                </div>
+                <div class="divide-y divide-gray-100 dark:divide-slate-700">
+                    {% if comparison.fixed_issues %}
+                    {% for f in comparison.fixed_issues %}
+                    <div class="px-4 py-2.5 bg-red-50/50 dark:bg-red-900/5">
+                        <p class="text-xs font-medium text-gray-900 dark:text-white">{{ f.title }}</p>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400">{{ f.severity }}</p>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% if comparison.new_issues %}
+                    {% for f in comparison.new_issues %}
+                    <div class="px-4 py-2.5 text-xs text-gray-300 dark:text-gray-600 italic">
+                        (not present)
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            <!-- After column -->
+            <div>
+                <div class="px-4 py-2 bg-green-50 dark:bg-green-900/10 border-b border-gray-200 dark:border-slate-700">
+                    <p class="text-xs font-semibold text-green-700 dark:text-green-400">After</p>
+                </div>
+                <div class="divide-y divide-gray-100 dark:divide-slate-700">
+                    {% if comparison.fixed_issues %}
+                    {% for f in comparison.fixed_issues %}
+                    <div class="px-4 py-2.5 text-xs text-gray-300 dark:text-gray-600 italic">
+                        (fixed)
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% if comparison.new_issues %}
+                    {% for f in comparison.new_issues %}
+                    <div class="px-4 py-2.5 bg-red-50/50 dark:bg-red-900/5">
+                        <p class="text-xs font-medium text-gray-900 dark:text-white">{{ f.title }}</p>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400">{{ f.severity }}</p>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diff Navigation -->
+    {% set total_changes = (comparison.fixed_issues|length if comparison.fixed_issues else 0) + (comparison.new_issues|length if comparison.new_issues else 0) + (comparison.changed_issues|length if comparison.changed_issues else 0) %}
+    {% if total_changes > 0 %}
+    <div class="px-4 py-2 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-200 dark:border-slate-700 flex items-center justify-between">
+        <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ total_changes }} change{{ 's' if total_changes != 1 else '' }} total</span>
+        <div class="flex items-center gap-2">
+            <kbd class="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400 font-mono">j/k</kbd>
+            <span class="text-[10px] text-gray-400">to navigate</span>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if comparison %}
+<script>
+function setDiffView(mode, btn) {
+    // Toggle buttons
+    document.querySelectorAll('.diff-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Toggle views
+    document.getElementById('diff-unified').classList.toggle('hidden', mode !== 'unified');
+    document.getElementById('diff-split').classList.toggle('hidden', mode !== 'split');
+
+    // Persist preference
+    QS.set('diffViewMode', mode);
+}
+
+// Restore saved view mode
+(function() {
+    const saved = QS.get('diffViewMode', 'unified');
+    if (saved === 'split') {
+        const btn = document.querySelectorAll('.diff-mode-btn')[1];
+        if (btn) setDiffView('split', btn);
+    }
+})();
+
+// Keyboard navigation for diff changes
+(function() {
+    const lines = document.querySelectorAll('.diff-line-added, .diff-line-removed, .diff-line-context:not(:last-child)');
+    let currentIdx = -1;
+
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+        if (e.key === 'j' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            currentIdx = Math.min(currentIdx + 1, lines.length - 1);
+            lines[currentIdx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            lines.forEach(l => l.style.outline = '');
+            if (lines[currentIdx]) lines[currentIdx].style.outline = '2px solid #6366f1';
+        }
+        if (e.key === 'k' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            currentIdx = Math.max(currentIdx - 1, 0);
+            lines[currentIdx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            lines.forEach(l => l.style.outline = '');
+            if (lines[currentIdx]) lines[currentIdx].style.outline = '2px solid #6366f1';
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

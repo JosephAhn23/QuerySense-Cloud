@@ -1,0 +1,79 @@
+- mount: checks
+  items:
+  - name: Overview
+    href: checks/
+  - name: Queries
+    href: checks/queries
+  - name: Connections
+    href: checks/connections
+  - name: Index Advisor
+    href: checks/index_advisor
+  - name: Schema
+    href: checks/schema
+  - name: Settings
+    href: checks/settings
+  - name: System
+    href: checks/system
+  - name: Replication
+    href: checks/replication
+  - name: Vacuum
+    href: checks/vacuum
+# TODO: Should the check TOC items be auto-generated from the list in util/checks?
+- mount: checks/queries
+  items:
+  - name: New Slow Queries
+    href: checks/queries/slowness
+  - name: Advisor Insights
+    href: checks/queries/advisor_insight
+- mount: checks/connections
+  items:
+  - name: Active Queries
+    href: checks/connections/active_query
+  - name: Idle Transactions
+    href: checks/connections/idle_transaction
+  - name: Blocking Queries
+    href: checks/connections/blocking_query
+- mount: checks/index_advisor
+  items:
+  - name: Missing Index
+    href: checks/index_advisor/indexing_engine
+- mount: checks/schema
+  items:
+  - name: Invalid Indexes
+    href: checks/schema/index_invalid
+  - name: Unused Indexes
+    href: checks/schema/index_unused
+- mount: checks/settings
+  items:
+  - name: Config - Disabled features
+    href: checks/settings/enable_features
+  - name: Config - Disabled fsync
+    href: checks/settings/fsync
+  - name: Config - Too small shared_buffers
+    href: checks/settings/shared_buffers
+  - name: Config - Disabled stats collection
+    href: checks/settings/stats
+  - name: Config - Too small work_mem
+    href: checks/settings/work_mem
+- mount: checks/system
+  items:
+  - name: Out of Disk Space
+    href: checks/system/storage_space
+- mount: checks/replication
+  items:
+  - name: Replication - High Lag
+    href: checks/replication/high_lag
+  - name: Replication - Missing HA Follower
+    href: checks/replication/follower_missing
+- mount: checks/vacuum
+  items:
+  - name: Performance - Inefficient Index Phase
+    href: checks/vacuum/inefficient_index_phase
+  - name: Bloat - Insufficient VACUUM Frequency
+    href: checks/vacuum/insufficient_vacuum_frequency
+  - name: Bloat - VACUUM Blocked by Xmin Horizon
+    href: checks/vacuum/xmin_horizon
+  - name: Freezing - Approaching Transaction ID Wraparound
+    href: checks/vacuum/txid_wraparound
+  - name: Freezing - Approaching Multixact ID Wraparound
+    href: checks/vacuum/mxid_wraparound

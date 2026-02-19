@@ -1,0 +1,93 @@
+<!-- Rewrite result partial — returned via HTMX POST -->
+{% if result.was_rewritten %}
+<div class="space-y-4 animate-fade-in">
+    <!-- Success header -->
+    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+        <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span class="text-sm font-semibold text-green-800 dark:text-green-300">
+                {{ result.rewrites|length }} optimization{{ 's' if result.rewrites|length > 1 else '' }} applied
+            </span>
+        </div>
+    </div>
+
+    <!-- Rewrites applied -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Rewrites Applied</h3>
+        <div class="space-y-3">
+            {% for rw in result.rewrites %}
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-700/50">
+                <div class="flex-shrink-0 mt-0.5">
+                    {% set conf = (rw.confidence * 100)|int %}
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold
+                        {% if conf >= 90 %}bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400
+                        {% elif conf >= 70 %}bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400
+                        {% else %}bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400{% endif %}">
+                        {{ conf }}%
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ rw.name }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ rw.description }}</div>
+                    <div class="mt-2 flex items-center gap-2 text-[11px]">
+                        <span class="px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono line-through">{{ rw.before_pattern|truncate(50) }}</span>
+                        <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        <span class="px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-mono">{{ rw.after_pattern|truncate(50) }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Rewritten SQL -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Optimized SQL</h3>
+            <button onclick="copyRewrittenSQL()" class="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 flex items-center gap-1 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                Copy
+            </button>
+        </div>
+        <pre id="rewritten-sql" class="bg-gray-900 dark:bg-slate-900 text-green-400 rounded-lg p-4 text-sm font-mono overflow-x-auto styled-scrollbar">{{ result.rewritten_sql }}</pre>
+    </div>
+
+    <!-- Warnings -->
+    {% if result.warnings %}
+    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+        <h4 class="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-2">Warnings</h4>
+        {% for w in result.warnings %}
+        <p class="text-xs text-amber-700 dark:text-amber-400">{{ w }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function copyRewrittenSQL() {
+    const sql = document.getElementById('rewritten-sql').textContent;
+    navigator.clipboard.writeText(sql).then(() => {
+        const btn = event.target.closest('button');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!';
+        setTimeout(() => btn.innerHTML = orig, 2000);
+    });
+}
+</script>
+
+{% else %}
+<!-- No rewrites applicable -->
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8 text-center animate-fade-in">
+    <div class="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
+        <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+    </div>
+    <p class="text-sm font-medium text-gray-900 dark:text-white">No optimizations applicable</p>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        The query is already in good shape, or the patterns are too complex for safe auto-rewrite.
+    </p>
+</div>
+{% endif %}

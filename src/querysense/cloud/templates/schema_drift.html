@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Schema Drift Detection — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Schema Drift Detection</h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 uppercase tracking-wider">Free</span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+            Compare schemas between environments. Catch unauthorized changes before they cause outages.
+            <span class="font-medium text-gray-700 dark:text-gray-300">Liquibase Pro charges for this. QuerySense gives it free.</span>
+        </p>
+    </div>
+
+    <!-- Input Form -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+        <form id="drift-form" hx-post="/schema/compare" hx-target="#drift-result" hx-indicator="#drift-spinner">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Source Schema -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Source Schema <span class="text-gray-400 font-normal">(e.g. production)</span>
+                    </label>
+                    <textarea name="source_sql" rows="12" required
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-mono text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-brand-500 focus:ring-brand-500 styled-scrollbar"
+                        placeholder="-- Paste CREATE TABLE / INDEX / CONSTRAINT DDL from production
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    amount NUMERIC(10,2) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_orders_user ON orders(user_id);
+CREATE INDEX idx_orders_status ON orders(status);"></textarea>
+                </div>
+
+                <!-- Target Schema -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Target Schema <span class="text-gray-400 font-normal">(e.g. staging)</span>
+                    </label>
+                    <textarea name="target_sql" rows="12" required
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-mono text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-brand-500 focus:ring-brand-500 styled-scrollbar"
+                        placeholder="-- Paste CREATE TABLE / INDEX / CONSTRAINT DDL from staging
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    amount NUMERIC(10,2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    temp_debug TEXT
+);
+CREATE INDEX idx_orders_user ON orders(user_id);"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="generate_fix" value="true" checked
+                        class="rounded border-gray-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Generate auto-fix SQL</span>
+                </label>
+
+                <button type="submit"
+                    class="inline-flex items-center px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-lg hover:bg-brand-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Compare Schemas
+                    <span id="drift-spinner" class="htmx-indicator ml-2">
+                        <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results container -->
+    <div id="drift-result">
+        <!-- Initial placeholder -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Paste DDL from two environments and compare them.</p>
+            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Detects missing indexes, extra columns, type changes, constraint drift.</p>
+        </div>
+    </div>
+
+    <!-- CLI equivalent -->
+    <div class="mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">CLI Equivalent</h3>
+        <div class="code-block text-sm">
+<span style="color:#94a3b8">$</span> <span style="color:#7dd3fc">querysense schema compare</span> --source=production --target=staging --dry-run
+
+<span style="color:#fbbf24">DRIFT DETECTED</span>
+  Missing in staging:
+    <span style="color:#f87171">-</span> index idx_orders_status (speeds up 73% of queries)
+  Extra in staging:
+    <span style="color:#34d399">+</span> column temp_debug (not in production)
+  Changed:
+    <span style="color:#fbbf24">~</span> orders.status: varchar(20) → varchar(50)
+
+<span style="color:#94a3b8">$</span> <span style="color:#7dd3fc">querysense schema sync</span> --source=production --target=staging --apply --safe
+</div>
+    </div>
+</div>
+{% endblock %}

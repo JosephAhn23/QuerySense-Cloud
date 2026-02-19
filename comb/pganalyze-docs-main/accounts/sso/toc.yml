@@ -1,0 +1,10 @@
+- mount: accounts/sso
+  items:
+  - name: Overview
+    href: accounts/sso
+  - name: Okta integration
+    href: accounts/sso/okta
+  - name: Azure integration
+    href: accounts/sso/azure
+  - name: Custom SAML 2.0 integration
+    href: accounts/sso/saml2

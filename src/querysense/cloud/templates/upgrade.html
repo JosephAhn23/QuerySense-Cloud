@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Upgrade Validator — QuerySense Cloud{% endblock %}
+
+{% block content %}
+<div class="sm:flex sm:items-center sm:justify-between mb-8">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">PostgreSQL Upgrade Validator</h1>
+        <p class="mt-1 text-sm text-gray-500">Compare query plans across PostgreSQL versions to catch regressions before upgrading.</p>
+    </div>
+</div>
+
+<!-- Value Proposition -->
+<div class="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-200 p-6 mb-8">
+    <div class="flex items-start">
+        <div class="flex-shrink-0 p-3 bg-orange-100 rounded-xl">
+            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        </div>
+        <div class="ml-4">
+            <h3 class="text-lg font-semibold text-gray-900">Save $2,000-50,000 per upgrade</h3>
+            <p class="mt-1 text-sm text-gray-600">Companies pay $8,000-$50,000+ per major version upgrade engagement. QuerySense automates plan comparison for every query, catching regressions human DBAs miss.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Comparison Form -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Run Upgrade Comparison</h2>
+    <form id="upgradeForm" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Source (Current Version)</label>
+                <div class="flex gap-2">
+                    <select name="source_version" class="flex-shrink-0 w-24 rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-brand-500 focus:border-brand-500">
+                        <option value="14">PG 14</option>
+                        <option value="15" selected>PG 15</option>
+                        <option value="16">PG 16</option>
+                        <option value="17">PG 17</option>
+                    </select>
+                    <input type="text" name="source_dsn" placeholder="postgresql://localhost:5432/mydb" class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-brand-500 focus:border-brand-500 font-mono">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Target (New Version)</label>
+                <div class="flex gap-2">
+                    <select name="target_version" class="flex-shrink-0 w-24 rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-brand-500 focus:border-brand-500">
+                        <option value="15">PG 15</option>
+                        <option value="16" selected>PG 16</option>
+                        <option value="17">PG 17</option>
+                        <option value="18">PG 18</option>
+                    </select>
+                    <input type="text" name="target_dsn" placeholder="postgresql://localhost:5433/mydb" class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-brand-500 focus:border-brand-500 font-mono">
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Top Queries</label>
+                <select name="top_queries" class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-brand-500 focus:border-brand-500">
+                    <option value="10">10</option>
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="500">500</option>
+                </select>
+            </div>
+            <div class="flex-1"></div>
+            <button type="button" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 border border-gray-300">
+                CLI Command
+            </button>
+            <button type="submit" class="px-6 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 shadow-sm">
+                Compare Plans
+            </button>
+        </div>
+    </form>
+
+    <!-- CLI equivalent -->
+    <div class="mt-4 hidden" id="cliEquivalent">
+        <div class="code-block text-sm relative group">querysense upgrade compare \
+  --source "postgresql://localhost:5432/mydb" \
+  --target "postgresql://localhost:5433/mydb" \
+  --top-queries 100
+<button onclick="copyToClipboard('querysense upgrade compare --source &quot;postgresql://localhost:5432/mydb&quot; --target &quot;postgresql://localhost:5433/mydb&quot; --top-queries 100', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+    </div>
+</div>
+
+<!-- How It Works -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-6">How It Works</h2>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="text-center relative">
+            <div class="w-14 h-14 bg-brand-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <svg class="w-7 h-7 text-brand-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.172 13.828a4 4 0 015.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101"></path></svg>
+            </div>
+            <p class="text-sm font-semibold text-gray-900">1. Connect</p>
+            <p class="text-xs text-gray-500 mt-1">Provide source and target connection strings</p>
+            <!-- Arrow -->
+            <div class="hidden md:block absolute top-7 -right-3 text-gray-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
+        </div>
+        <div class="text-center relative">
+            <div class="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <svg class="w-7 h-7 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            <p class="text-sm font-semibold text-gray-900">2. Discover</p>
+            <p class="text-xs text-gray-500 mt-1">Pull top-N queries from pg_stat_statements</p>
+            <div class="hidden md:block absolute top-7 -right-3 text-gray-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
+        </div>
+        <div class="text-center relative">
+            <div class="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <svg class="w-7 h-7 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <p class="text-sm font-semibold text-gray-900">3. Compare</p>
+            <p class="text-xs text-gray-500 mt-1">EXPLAIN on both, diff plan trees</p>
+            <div class="hidden md:block absolute top-7 -right-3 text-gray-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
+        </div>
+        <div class="text-center">
+            <div class="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <svg class="w-7 h-7 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </div>
+            <p class="text-sm font-semibold text-gray-900">4. Report</p>
+            <p class="text-xs text-gray-500 mt-1">Severity-scored regression report</p>
+        </div>
+    </div>
+</div>
+
+<!-- Version Knowledge Base -->
+<div id="upgradeTabs" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+    <div class="border-b border-gray-200 px-4 flex gap-1">
+        <button class="tab-btn active" data-tab="tab-knowledge">Knowledge Base</button>
+        <button class="tab-btn" data-tab="tab-cli">CLI Usage</button>
+    </div>
+
+    <div id="tab-knowledge" class="tab-content active p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-2">Version-Specific Optimizer Changes</h3>
+        <p class="text-sm text-gray-500 mb-6">QuerySense knows about optimizer changes in each PostgreSQL version and automatically matches plan diffs against known patterns.</p>
+
+        <div class="space-y-8">
+            {% for version_pair in version_changes %}
+            <div>
+                <div class="flex items-center mb-3">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-brand-100 text-brand-800">
+                        PG {{ version_pair.from }} -> {{ version_pair.to }}
+                    </span>
+                    <span class="ml-2 text-xs text-gray-400">{{ version_pair.changes | length }} known change(s)</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {% for change in version_pair.changes %}
+                    <div class="flex items-start p-3 rounded-lg border {% if change.risk_level == 'improvement' %}border-green-200 bg-green-50{% elif change.risk_level == 'risk' %}border-red-200 bg-red-50{% else %}border-yellow-200 bg-yellow-50{% endif %}">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold flex-shrink-0 {% if change.risk_level == 'improvement' %}bg-green-200 text-green-800{% elif change.risk_level == 'risk' %}bg-red-200 text-red-800{% else %}bg-yellow-200 text-yellow-800{% endif %}">
+                            {{ change.risk_level | upper }}
+                        </span>
+                        <div class="ml-3 min-w-0">
+                            <p class="text-sm font-medium text-gray-900">{{ change.title }}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">{{ change.description }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div id="tab-cli" class="tab-content p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">CLI Commands</h3>
+        <div class="space-y-4">
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-2">Compare plans between versions:</p>
+                <div class="code-block relative group">querysense upgrade compare \
+  --source "postgresql://localhost:5432/mydb" \
+  --target "postgresql://localhost:5433/mydb" \
+  --top-queries 100
+<button onclick="copyToClipboard('querysense upgrade compare --source &quot;postgresql://localhost:5432/mydb&quot; --target &quot;postgresql://localhost:5433/mydb&quot; --top-queries 100', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-2">View known optimizer changes:</p>
+                <div class="code-block relative group">querysense upgrade knowledge --from 15 --to 17
+<button onclick="copyToClipboard('querysense upgrade knowledge --from 15 --to 17', this)" class="absolute top-2 right-2 p-1 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initTabs('upgradeTabs');
+
+    // Toggle CLI equivalent
+    document.querySelectorAll('button').forEach(btn => {
+        if (btn.textContent.trim() === 'CLI Command') {
+            btn.addEventListener('click', () => {
+                document.getElementById('cliEquivalent').classList.toggle('hidden');
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

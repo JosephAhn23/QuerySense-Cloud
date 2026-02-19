@@ -1,0 +1,79 @@
+---
+title: 'getIssues - Get check-up issues and alerts'
+backlink_href: /docs/api/queries
+backlink_title: 'pganalyze GraphQL API Queries'
+---
+
+## Use case
+
+You can utilize this endpoint to export the currently active issues for a server
+or database, as determined by the pganalyze Check-Up system, in order to export
+them to a third-party system not directly supported by pganalyze's
+[alerting integrations](/docs/checks/#alerting).
+
+## API
+
+Arguments for `getIssues`:
+
+* **`serverId` (string)**<br/>Server ID for which to retrieve issues for
+* **`databaseId` (string)**<br/>Database ID for which to retrieve issues for (either this or `serverId` needs to be specified)
+* **`severity` (string[] of "info", "warning", or "critical")** (optional)<br/>Only return issues with matching severities (by default issues of any severity are returned)
+
+Fields returned:
+
+* **`issues` (Array of IssueType)**
+  * **`id` (String)**<br/>Unique ID of this issue
+  * **`databaseId` (Number)**<br/>Database ID this issue is related to
+  * **`description` (String)**<br/>Issue description
+  * **`severity` (String)**<br/>Issue severity (info, warning, critical)
+  * **`references` (Array of IssueReferenceType)**
+      * **`kind` (String)**<br/>Type of object this issue references
+      * **`name` (String)**<br/>Name of the object this issue references
+      * **`url` (String)**<br/>URL to the object this issue references
+      * **`queryText` (String)** (optional)<br/>For query references, statement text of the query
+
+## Example
+
+GraphQL query:
+
+<CodeBlock language="graphql">
+{`query {
+  getIssues(serverId: 'bdp4m73ysjgefke7i2dgkenzi4') {
+    id
+    description
+    severity
+    references {
+      name
+      url
+    }
+  }
+}`}
+</CodeBlock>
+
+Using `curl`:
+
+<CodeBlock language="bash">
+{`curl -XPOST -H 'Authorization: Token XXXXXXX' \
+  -F 'query=query { getIssues(serverId: "bdp4m73ysjgefke7i2dgkenzi4") { id, description, severity, references { name, url } } }' \
+  https://app.pganalyze.com/graphql`}
+</CodeBlock>
+
+<CodeBlock language="json">
+{`{
+  "data": {
+    "getIssues": [
+      {
+        "id": "42",
+        "description": "Setting shared_buffers is too small. For For MB RAM try using shared_buffers = 256 MB (current: 199 MB)",
+        "severity": "warning",
+        "references": [
+          {
+            "name": "shared_buffers",
+            "url": "/servers/bdp4m73ysjgefke7i2dgkenzi4/config/shared_buffers"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+</CodeBlock>

@@ -1,0 +1,37 @@
+---
+work_in_progress: true
+log_classification: V101
+log_title: Foreign key constraint violation
+log_category: constraint-violations
+collector_key: FOREIGN_KEY_CONSTRAINT_VIOLATION
+tooltip: Foreign key constraint violated by INSERT/UPDATE/DELETE
+urgency: low
+sqlstate: "23503 (Class 23 — Integrity Constraint Violation: foreign_key_violation)"
+color: "#8A2BE2"
+---
+
+**Example Postgres Log Output:**
+
+```
+ERROR: insert or update on table "weather" violates foreign key constraint "weather_city_fkey"
+DETAIL: Key (city)=(Berkeley) is not present in table "cities".
+STATEMENT: INSERT INTO weather VALUES ('Berkeley', 45, 53, 0.0, '1994-11-28');
+```
+
+```
+ERROR: update or delete on table "test" violates foreign key constraint "test_fkey" on table "othertest"
+DETAIL: Key (id)=(123) is still referenced from table "othertest".
+STATEMENT: DELETE FROM test WHERE id = 123
+```
+
+**Explanation:**
+
+...
+
+**Recommended Action:**
+
+...
+
+**Learn More:**
+
+No additional resources available.

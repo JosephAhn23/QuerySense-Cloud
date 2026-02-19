@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Advisor — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-3">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Advisor Framework</h1>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 uppercase tracking-wider">PMM Parity</span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+            Run 10+ built-in checks against your database — long queries, bloat, wraparound, unused indexes,
+            replication lag, checkpoint pressure, and more. Results stored locally in SQLite.
+        </p>
+    </div>
+
+    <!-- Connection Form -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+        <form hx-post="/advisor/run" hx-target="#advisor-results" hx-indicator="#advisor-spinner">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        PostgreSQL Connection String
+                    </label>
+                    <input type="text" name="dsn" required
+                        class="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100 placeholder-gray-400"
+                        placeholder="postgresql://user:pass@localhost:5432/mydb">
+                </div>
+                <button type="submit"
+                    class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-brand-600 text-white font-medium text-sm hover:bg-brand-700 transition-colors shadow-sm">
+                    Run All Checks
+                </button>
+            </div>
+        </form>
+        <div id="advisor-spinner" class="htmx-indicator mt-4">
+            <div class="flex items-center justify-center py-6">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+                <span class="ml-3 text-sm text-gray-500">Running advisor checks...</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="advisor-results"></div>
+
+    <!-- Built-in checks list -->
+    <div class="bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700 p-6 mt-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Built-in Checks (10)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            <div class="flex items-center gap-2"><span class="text-yellow-500">WARNING</span> Long-Running Queries (&gt;5 min)</div>
+            <div class="flex items-center gap-2"><span class="text-blue-500">INFO</span> Unused Indexes (zero scans)</div>
+            <div class="flex items-center gap-2"><span class="text-yellow-500">WARNING</span> High Dead Tuple Ratio (&gt;20%)</div>
+            <div class="flex items-center gap-2"><span class="text-red-500">CRITICAL</span> XID Wraparound Risk</div>
+            <div class="flex items-center gap-2"><span class="text-yellow-500">WARNING</span> Replication Lag (&gt;10s)</div>
+            <div class="flex items-center gap-2"><span class="text-yellow-500">WARNING</span> Connection Saturation (&gt;80%)</div>
+            <div class="flex items-center gap-2"><span class="text-red-500">CRITICAL</span> Sequence Exhaustion</div>
+            <div class="flex items-center gap-2"><span class="text-yellow-500">WARNING</span> Checkpoint Pressure</div>
+            <div class="flex items-center gap-2"><span class="text-yellow-500">WARNING</span> Table Bloat (&gt;30%)</div>
+            <div class="flex items-center gap-2"><span class="text-yellow-500">WARNING</span> Autovacuum Worker Saturation</div>
+        </div>
+        <p class="mt-3 text-xs text-gray-500">
+            Add custom checks via <code class="text-gray-700 dark:text-gray-300">~/.querysense/checks.yml</code> or
+            <code class="text-gray-700 dark:text-gray-300">querysense advisor run --checks path/to/checks.yml</code>
+        </p>
+    </div>
+</div>
+{% endblock %}

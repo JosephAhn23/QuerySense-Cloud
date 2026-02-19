@@ -1,0 +1,93 @@
+# Docker Compose for QuerySense development and testing
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose up -d postgres redis  # Start only core services
+#   docker-compose exec postgres psql  # Connect to Postgres
+#   docker-compose down               # Stop all
+
+version: "3.8"
+
+services:
+  # PostgreSQL 16 for testing
+  postgres:
+    image: postgres:16-alpine
+    container_name: querysense-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-querysense}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-querysense}
+      POSTGRES_DB: ${POSTGRES_DB:-testdb}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/db/postgres_init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U querysense -d testdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # MySQL 8.0 for testing
+  mysql:
+    image: mysql:8.0
+    container_name: querysense-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-querysense}
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: querysense
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-querysense}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/db/mysql_init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "querysense"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+
+  # Redis for caching, task queue, and pub/sub (WebSocket events)
+  redis:
+    image: redis:7-alpine
+    container_name: querysense-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # TimescaleDB for time-series query metrics (extends PostgreSQL)
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: querysense-timescale
+    environment:
+      POSTGRES_USER: ${TIMESCALE_USER:-querysense}
+      POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD:-querysense}
+      POSTGRES_DB: querysense_metrics
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./scripts/db/timescale_init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U querysense -d querysense_metrics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mysql_data:
+  redis_data:
+  timescale_data:

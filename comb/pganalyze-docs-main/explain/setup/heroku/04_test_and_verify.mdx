@@ -1,0 +1,32 @@
+---
+title: 'Step 4: Test and Verify'
+install_track_title: 'Automated EXPLAIN: Setup (Heroku Postgres)'
+backlink_href: /docs/explain/setup
+backlink_title: 'Automated EXPLAIN: Setup'
+---
+
+import VerifyExplainPublic from '../_verify_explain_public.mdx'
+
+At this point, your pganalyze setup should be ready to collect EXPLAIN plans. Since
+you may not have any slow queries in your system right now, we can generate a
+synthetic slow query that we can use to confirm everything is working.
+
+The collector includes a flag to do this for you automatically, based on your
+`auto_explain.log_min_duration`:
+
+<CodeBlock language="bash">
+{`heroku run -a [your-collector-app-name] -- collector --test-explain`}
+</CodeBlock>
+
+This will run an artificially slow query using the Postgres `pg_sleep` function. It
+will produce output similar to the following:
+
+<CodeBlock language="text">
+{`Running collector --test-explain on ⬢ [your-collector-app-name]... up, run.3163
+2024/09/23 09:30:19 I Running collector test with pganalyze-collector 0.58.0
+2024/09/23 09:30:19 I [DATABASE_URL] Emitted test explain; check pganalyze EXPLAIN Plans page for result`}
+</CodeBlock>
+
+<PublicOnly>
+  <VerifyExplainPublic />
+</PublicOnly>

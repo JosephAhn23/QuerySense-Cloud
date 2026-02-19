@@ -1,0 +1,99 @@
+{% if error %}
+<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+    <p class="text-sm text-red-700 dark:text-red-400">{{ error }}</p>
+</div>
+{% elif not has_data %}
+<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+    <p class="text-sm text-yellow-700 dark:text-yellow-400">
+        No BUFFERS data found. Run with <code class="font-mono bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded">EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)</code>.
+    </p>
+</div>
+{% elif report %}
+<!-- Summary Panel -->
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">I/O Summary</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="text-center">
+            <div class="text-2xl font-bold {% if report.summary.overall_hit_pct >= 95 %}text-green-600{% elif report.summary.overall_hit_pct >= 80 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                {{ "%.1f"|format(report.summary.overall_hit_pct) }}%
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">Cache Hit Rate</div>
+        </div>
+        <div class="text-center">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ "%.1f"|format(report.summary.total_disk_read_mb) }}MB</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">Disk Reads</div>
+        </div>
+        <div class="text-center">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ report.summary.total_shared_hit|default(0) }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">Shared Hit Blocks</div>
+        </div>
+        <div class="text-center">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ report.summary.critical_nodes|default(0) }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">Critical Nodes</div>
+        </div>
+    </div>
+    {% if report.summary.estimated_savings_ms > 1 %}
+    <div class="mt-3 text-sm text-green-600 dark:text-green-400 text-center">
+        Estimated I/O savings if fully cached: ~{{ "%.0f"|format(report.summary.estimated_savings_ms) }}ms
+    </div>
+    {% endif %}
+</div>
+
+<!-- Per-Node Table -->
+{% if report.nodes %}
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Per-Node I/O Breakdown</h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-slate-700">
+                    <th class="text-left py-2 px-3 font-medium text-gray-500 dark:text-gray-400">Node</th>
+                    <th class="text-left py-2 px-3 font-medium text-gray-500 dark:text-gray-400">Table</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-500 dark:text-gray-400">Hit</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-500 dark:text-gray-400">Read</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-500 dark:text-gray-400">Hit %</th>
+                    <th class="text-right py-2 px-3 font-medium text-gray-500 dark:text-gray-400">Disk MB</th>
+                    <th class="text-center py-2 px-3 font-medium text-gray-500 dark:text-gray-400">Severity</th>
+                    <th class="text-left py-2 px-3 font-medium text-gray-500 dark:text-gray-400">Root Cause</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for node in report.nodes %}
+                {% if node.shared_hit > 0 or node.shared_read > 0 %}
+                <tr class="border-b border-gray-100 dark:border-slate-700/50 hover:bg-gray-50 dark:hover:bg-slate-700/30">
+                    <td class="py-2 px-3 font-mono text-xs">{{ node.node_type }}</td>
+                    <td class="py-2 px-3 text-cyan-600 dark:text-cyan-400 font-mono text-xs">{{ node.table or '-' }}</td>
+                    <td class="py-2 px-3 text-right font-mono text-xs">{{ node.shared_hit }}</td>
+                    <td class="py-2 px-3 text-right font-mono text-xs">{{ node.shared_read }}</td>
+                    <td class="py-2 px-3 text-right font-mono text-xs {% if node.cache_hit_pct >= 95 %}text-green-600{% elif node.cache_hit_pct >= 80 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                        {{ "%.0f"|format(node.cache_hit_pct) }}%
+                    </td>
+                    <td class="py-2 px-3 text-right font-mono text-xs">{{ "%.1f"|format(node.disk_read_mb) }}</td>
+                    <td class="py-2 px-3 text-center">
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
+                            {% if node.severity == 'CRITICAL' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
+                            {% elif node.severity == 'HIGH' %}bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400
+                            {% elif node.severity == 'MEDIUM' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400
+                            {% else %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400{% endif %}">
+                            {{ node.severity }}
+                        </span>
+                    </td>
+                    <td class="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{{ node.root_cause|replace('_', ' ') }}</td>
+                </tr>
+                {% if node.recommendations %}
+                <tr class="border-b border-gray-100 dark:border-slate-700/50">
+                    <td colspan="8" class="py-1 px-3">
+                        {% for rec in node.recommendations %}
+                        <div class="text-xs text-green-600 dark:text-green-400 pl-4">-> {{ rec }}</div>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endif %}

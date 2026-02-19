@@ -1,0 +1,36 @@
+- mount: vacuum-advisor
+  items:
+  - name: "Overview"
+    href: vacuum-advisor
+  - name: "Getting Started"
+    href: vacuum-advisor/getting-started
+  - name: "Bloat"
+    href: vacuum-advisor/bloat
+  - name: "Freezing"
+    href: vacuum-advisor/freezing
+  - name: "Performance"
+    href: vacuum-advisor/performance
+  - name: "Activity"
+    href: vacuum-advisor/activity
+  - name: "Per Table Activity"
+    href: vacuum-advisor/per-table-activity
+  - name: "VACUUM Simulator"
+    href: vacuum-advisor/vacuum-simulator
+- mount: vacuum-advisor/bloat
+  items:
+  - name: "Bloat in VACUUM Advisor"
+    href: vacuum-advisor/bloat
+  - name: "What is Bloat?"
+    href: vacuum-advisor/what-is-bloat
+- mount: vacuum-advisor/freezing
+  items:
+  - name: "Freezing in VACUUM Advisor"
+    href: vacuum-advisor/freezing
+  - name: "What is Freezing?"
+    href: vacuum-advisor/what-is-freezing
+- mount: vacuum-advisor/performance
+  items:
+  - name: "Performance in VACUUM Advisor"
+    href: vacuum-advisor/performance
+  - name: "How does the VACUUM cost model work?"
+    href: vacuum-advisor/how-does-the-vacuum-cost-model-work

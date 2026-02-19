@@ -1,0 +1,95 @@
+{% if error %}
+<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+    <p class="text-sm text-red-700 dark:text-red-400">{{ error }}</p>
+</div>
+{% elif result %}
+<div class="space-y-6">
+    <!-- Column Analysis -->
+    {% if result.column_analysis %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Column Analysis</h2>
+        <div class="space-y-2">
+            {% for line in result.column_analysis %}
+            <div class="flex items-center gap-3 py-2 px-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-400 text-xs font-bold">{{ loop.index }}</span>
+                <span class="text-sm font-mono text-gray-700 dark:text-gray-300">{{ line }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommended Order -->
+    {% if result.recommended_columns %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Recommended Column Order</h2>
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+            <span class="text-gray-500 dark:text-gray-400 text-sm">(</span>
+            {% for col in result.recommended_columns %}
+            <span class="inline-flex items-center px-3 py-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 border border-cyan-200 dark:border-cyan-800 text-sm font-mono font-medium text-cyan-800 dark:text-cyan-300">
+                {{ col.name }} {{ col.direction }}
+            </span>
+            {% if not loop.last %}<span class="text-gray-400">,</span>{% endif %}
+            {% endfor %}
+            <span class="text-gray-500 dark:text-gray-400 text-sm">)</span>
+        </div>
+
+        {% if result.ordering_rationale %}
+        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Why this order:</h3>
+        <div class="space-y-2">
+            {% for line in result.ordering_rationale %}
+            <p class="text-sm text-gray-600 dark:text-gray-400 pl-4 border-l-2 border-brand-300 dark:border-brand-700">{{ line }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Badges -->
+    <div class="flex flex-wrap gap-3">
+        {% if result.sort_eliminated %}
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span class="text-sm font-medium text-green-700 dark:text-green-400">Sort Elimination</span>
+        </div>
+        {% endif %}
+        {% if result.covers_query %}
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span class="text-sm font-medium text-blue-700 dark:text-blue-400">Index-Only Scan Possible</span>
+        </div>
+        {% endif %}
+        {% if result.estimated_speedup %}
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
+            <span class="text-sm font-medium text-purple-700 dark:text-purple-400">Est. Improvement: {{ result.estimated_speedup }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Performance Notes -->
+    {% if result.performance_notes %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-3">Performance Impact</h2>
+        <div class="space-y-2">
+            {% for note in result.performance_notes %}
+            <p class="text-sm text-green-600 dark:text-green-400">{{ note }}</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Generated SQL -->
+    {% if result.sql %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Generated SQL</h2>
+            <button onclick="navigator.clipboard.writeText(this.closest('.p-6').querySelector('code').textContent)"
+                class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+                Copy
+            </button>
+        </div>
+        <pre class="bg-gray-900 rounded-lg p-4 overflow-x-auto"><code class="text-sm font-mono text-green-400">{{ result.sql }}</code></pre>
+    </div>
+    {% endif %}
+</div>
+{% endif %}

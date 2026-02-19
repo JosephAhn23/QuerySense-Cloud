@@ -1,0 +1,18 @@
+- mount: enterprise
+  items:
+  - name: Overview
+    href: enterprise
+  - name: Container settings
+    href: enterprise/settings
+  - name: Setup instructions
+    href: enterprise/setup
+  - name: Release changelog
+    href: enterprise/releases
+  - name: Upgrading to new releases
+    href: enterprise/upgrade
+  - name: Reference architecture
+    href: enterprise/architecture
+  - name: Integrating PostGIS
+    href: enterprise/postgis
+  - name: Troubleshooting
+    href: enterprise/troubleshooting

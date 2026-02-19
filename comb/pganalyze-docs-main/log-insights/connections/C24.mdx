@@ -1,0 +1,42 @@
+---
+log_classification: C24
+log_title: Client failed to connect
+log_category: connections
+collector_key: CONNECTION_CLIENT_FAILED_TO_CONNECT
+tooltip: The client opened a connection but didn't complete the initial process
+urgency: low
+sqlstate: "08P01 (Class 08 - Connection Exception: protocol_violation)"
+color: "#999"
+---
+
+**Example Postgres Log Output:**
+
+```
+LOG: incomplete startup packet
+```
+
+**Explanation:**
+
+This message occurs when PostgreSQL received a TCP connection, but the client
+didn't complete sending the remaining data to actually start establishing
+a Postgres connection.
+
+Before PostgreSQL 12, where the behaviour was altered, this commonly occurred
+when third-party tools did health checks on a PostgreSQL database by doing
+a TCP connection and then immediately abandoning it again after the server
+acknowledges the connection on the TCP level.
+
+You can reproduce this by running `telnet localhost 5432` or `nc -vz localhost 5432`
+which will result in this message being printed to the Postgres logs.
+
+Starting with PostgreSQL 12 this message has been reduced to DEBUG1 level and
+should no longer be visible for production systems.
+
+**Recommended Action:**
+
+No action is necessary - this log message can be safely ignored.
+
+**Learn More:**
+
+* [PostgreSQL 12 Improvement: Benign Log Entries “Incomplete Startup Packet”](https://www.percona.com/blog/2019/12/03/postgresql-12-improvement-benign-log-entries-incomplete-startup-packet/)
+* [pgsql-hackers: Incomplete startup packet errors](https://www.postgresql.org/message-id/flat/a1379a72-2958-1ed0-ef51-09a21219b155%402ndQuadrant.com)

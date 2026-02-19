@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}API Keys - QuerySense Cloud{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">API Keys</h1>
+    <p class="mt-1 text-sm text-gray-500">
+        Manage API keys for programmatic access to your workspace. Use Bearer authentication with your API key.
+    </p>
+</div>
+
+<!-- New key alert -->
+{% if new_key %}
+<div class="mb-6 rounded-md bg-green-50 border border-green-200 p-4">
+    <h3 class="text-sm font-semibold text-green-800 mb-2">API Key Created</h3>
+    <p class="text-sm text-green-700 mb-2">Copy this key now. You won't be able to see it again.</p>
+    <div class="flex items-center gap-2">
+        <input type="text" value="{{ new_key }}" readonly id="new-key-input"
+               class="flex-1 rounded-md border border-green-300 bg-white px-3 py-2 text-sm font-mono text-gray-900"
+               onclick="this.select()">
+        <button onclick="navigator.clipboard.writeText(document.getElementById('new-key-input').value)"
+                class="rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-500">
+            Copy
+        </button>
+    </div>
+    <p class="mt-2 text-xs text-green-600">
+        Usage: <code class="bg-green-100 px-1 py-0.5 rounded">curl -H "Authorization: Bearer {{ new_key }}" {{ request.base_url }}api/v1/plans</code>
+    </p>
+</div>
+{% endif %}
+
+<!-- Create key form -->
+<div class="bg-white shadow rounded-lg p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">Create New API Key</h2>
+    <form action="/settings/api-keys" method="POST" class="flex items-end gap-4">
+        <div class="flex-1">
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Key Name</label>
+            <input type="text" name="name" id="name" required
+                   class="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                   placeholder="e.g., CI Pipeline, Local Dev">
+        </div>
+        <button type="submit"
+                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+            Create Key
+        </button>
+    </form>
+</div>
+
+<!-- Keys table -->
+{% if keys %}
+<div class="overflow-hidden bg-white shadow ring-1 ring-black/5 sm:rounded-lg">
+    <table class="min-w-full divide-y divide-gray-300">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Name</th>
+                <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Prefix</th>
+                <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Created</th>
+                <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Last Used</th>
+                <th class="relative py-3.5 pl-3 pr-4 sm:pr-6"><span class="sr-only">Actions</span></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for key in keys %}
+            <tr>
+                <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{{ key.name }}</td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm font-mono text-gray-500">{{ key.prefix }}...</td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm">
+                    {% if key.is_active %}
+                    <span class="badge-success inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">Active</span>
+                    {% else %}
+                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">Revoked</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ key.created_at }}</td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ key.last_used_at }}</td>
+                <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                    {% if key.is_active %}
+                    <form action="/settings/api-keys/{{ key.id }}/revoke" method="POST" class="inline"
+                          onsubmit="return confirm('Revoke this API key? This cannot be undone.')">
+                        <button type="submit" class="text-red-600 hover:text-red-900">Revoke</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-12 bg-white rounded-lg shadow">
+    <h3 class="text-sm font-semibold text-gray-900">No API keys</h3>
+    <p class="mt-1 text-sm text-gray-500">Create an API key to access QuerySense Cloud programmatically.</p>
+</div>
+{% endif %}
+
+<!-- API Usage Examples -->
+<div class="mt-8 bg-white shadow rounded-lg p-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">API Usage</h2>
+
+    <div class="space-y-4">
+        <div>
+            <h3 class="text-sm font-medium text-gray-700 mb-2">Stateless analysis (no storage)</h3>
+            <pre class="code-block text-xs">curl -X POST {{ request.base_url }}api/v1/analyze \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"plan_json": "[{\"Plan\": {\"Node Type\": \"Seq Scan\", ...}}]"}'</pre>
+        </div>
+
+        <div>
+            <h3 class="text-sm font-medium text-gray-700 mb-2">Upload and store a plan</h3>
+            <pre class="code-block text-xs">curl -X POST {{ request.base_url }}api/v1/plans \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"plan_json": "...", "title": "My Query", "tags": ["production"]}'</pre>
+        </div>
+
+        <div>
+            <h3 class="text-sm font-medium text-gray-700 mb-2">List plans</h3>
+            <pre class="code-block text-xs">curl {{ request.base_url }}api/v1/plans \
+  -H "Authorization: Bearer YOUR_API_KEY"</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,189 @@
+name: 'QuerySense Plan Analysis'
+description: 'Analyze PostgreSQL EXPLAIN plans in CI/CD with regression detection, compliance checking, and policy enforcement'
+branding:
+  icon: 'database'
+  color: 'purple'
+
+inputs:
+  plan-pattern:
+    description: 'Glob pattern for EXPLAIN JSON files'
+    required: false
+    default: 'plans/**/*.json'
+  fail-on:
+    description: 'Severity level to fail on: critical, warning, info, none'
+    required: false
+    default: 'warning'
+  baseline-file:
+    description: 'Path to baseline file'
+    required: false
+    default: '.querysense/baselines.json'
+  policy-file:
+    description: 'Path to policy file'
+    required: false
+    default: '.querysense/policy.yml'
+  tables-file:
+    description: 'Path to table classifications file'
+    required: false
+    default: '.querysense/tables.yml'
+  format:
+    description: 'Output format: text, markdown, json, github'
+    required: false
+    default: 'github'
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.12'
+  querysense-version:
+    description: 'QuerySense version to install'
+    required: false
+    default: 'latest'
+  discover-migrations:
+    description: 'Auto-discover migration files'
+    required: false
+    default: 'true'
+  compliance-check:
+    description: 'Run compliance checks (requires tables.yml)'
+    required: false
+    default: 'false'
+  regulations:
+    description: 'Comma-separated list of regulations for compliance check'
+    required: false
+    default: ''
+
+outputs:
+  findings-count:
+    description: 'Total number of findings'
+    value: ${{ steps.analyze.outputs.findings-count }}
+  critical-count:
+    description: 'Number of critical findings'
+    value: ${{ steps.analyze.outputs.critical-count }}
+  regression-count:
+    description: 'Number of regressions detected'
+    value: ${{ steps.analyze.outputs.regression-count }}
+  result:
+    description: 'Pass or fail result'
+    value: ${{ steps.analyze.outputs.result }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install QuerySense
+      shell: bash
+      run: |
+        if [ "${{ inputs.querysense-version }}" = "latest" ]; then
+          pip install querysense
+        else
+          pip install querysense==${{ inputs.querysense-version }}
+        fi
+
+    - name: Discover migrations
+      if: inputs.discover-migrations == 'true'
+      shell: bash
+      run: |
+        echo "::group::Migration Discovery"
+        querysense ci discover . --format text || true
+        echo "::endgroup::"
+
+    - name: Analyze plans
+      id: analyze
+      shell: bash
+      run: |
+        echo "::group::QuerySense Analysis"
+
+        FORMAT_ARGS=""
+        if [ "${{ inputs.format }}" = "github" ]; then
+          FORMAT_ARGS="--format json --output /tmp/qs_results.json"
+        else
+          FORMAT_ARGS="--format ${{ inputs.format }}"
+        fi
+
+        querysense ci analyze \
+          "${{ inputs.plan-pattern }}" \
+          --fail-on "${{ inputs.fail-on }}" \
+          --baseline "${{ inputs.baseline-file }}" \
+          $FORMAT_ARGS \
+          --allow-plain || EXIT_CODE=$?
+
+        # Parse results for outputs
+        if [ -f /tmp/qs_results.json ]; then
+          FINDINGS=$(python -c "import json; d=json.load(open('/tmp/qs_results.json')); print(d.get('summary',{}).get('findings_count',0))")
+          CRITICAL=$(python -c "import json; d=json.load(open('/tmp/qs_results.json')); print(d.get('summary',{}).get('critical_count',0))")
+          REGRESSIONS=$(python -c "import json; d=json.load(open('/tmp/qs_results.json')); print(d.get('summary',{}).get('regression_count',0))")
+
+          echo "findings-count=$FINDINGS" >> $GITHUB_OUTPUT
+          echo "critical-count=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "regression-count=$REGRESSIONS" >> $GITHUB_OUTPUT
+
+          # Write step summary
+          echo "## QuerySense Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${EXIT_CODE:-0}" = "0" ]; then
+            echo "**Status:** Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Status:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- **Findings:** $FINDINGS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Critical:** $CRITICAL" >> $GITHUB_STEP_SUMMARY
+          echo "- **Regressions:** $REGRESSIONS" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ "${EXIT_CODE:-0}" = "0" ]; then
+          echo "result=pass" >> $GITHUB_OUTPUT
+        else
+          echo "result=fail" >> $GITHUB_OUTPUT
+        fi
+
+        echo "::endgroup::"
+        exit ${EXIT_CODE:-0}
+
+    - name: Annotate findings
+      if: always() && steps.analyze.outcome != 'skipped'
+      shell: python
+      run: |
+        import json, os, sys
+
+        results_file = "/tmp/qs_results.json"
+        if not os.path.exists(results_file):
+            sys.exit(0)
+
+        with open(results_file) as fh:
+            d = json.load(fh)
+
+        for f in d.get("findings", []):
+            sev = f.get("severity", "info")
+            if sev == "critical":
+                level = "error"
+            elif sev == "warning":
+                level = "warning"
+            else:
+                level = "notice"
+
+            title = f.get("title", "QuerySense Finding")
+            msg = f.get("description", "")[:200]
+            file_path = f.get("file", "")
+
+            if file_path:
+                print(f"::{level} file={file_path}::{title}: {msg}")
+            else:
+                print(f"::{level}::{title}: {msg}")
+
+    - name: Compliance check
+      if: inputs.compliance-check == 'true'
+      shell: bash
+      run: |
+        echo "::group::Compliance Check"
+        ARGS="--tables ${{ inputs.tables-file }}"
+        if [ -n "${{ inputs.regulations }}" ]; then
+          ARGS="$ARGS --regulations ${{ inputs.regulations }}"
+        fi
+        # Run compliance on any discovered SQL files
+        for f in $(find . -name "*.sql" -path "*/migrations/*" 2>/dev/null | head -20); do
+          echo "Checking: $f"
+          querysense compliance check "$f" $ARGS --format text || true
+        done
+        echo "::endgroup::"

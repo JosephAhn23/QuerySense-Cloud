@@ -1,0 +1,66 @@
+# .github/querysense.yml — Performance as Code
+# Put this in your repo. QuerySense enforces it in CI.
+#
+# Usage:
+#   querysense budget check plan.json --config .querysense.yml
+#
+# In GitHub Actions:
+#   - run: querysense budget check plans/*.json --config .querysense.yml
+
+performance_budgets:
+  # Budget for specific queries (regex matching)
+  - name: "Order lookup"
+    query: "SELECT.*FROM orders WHERE status"
+    max_execution_time: 50ms
+    max_rows_scanned: 10000
+    max_severity: "warning"
+
+  # Budget for user-facing queries
+  - name: "User authentication"
+    query: "SELECT.*FROM users WHERE.*email"
+    max_execution_time: 20ms
+    max_seq_scan_rows: 1000
+
+  # Budget for a specific table
+  - name: "Users table policy"
+    table: "users"
+    max_seq_scan_rows: 5000
+
+  # Budget for reporting queries (more lenient)
+  - name: "Reports"
+    query: "SELECT.*GROUP BY"
+    max_execution_time: 2000ms
+    max_rows_scanned: 1000000
+    tags:
+      - reporting
+      - batch
+
+  # Global budget for all queries
+  - name: "Default budget"
+    max_execution_time: 500ms
+    max_severity: "warning"  # Block any critical findings
+    max_findings: 5
+
+migration_policies:
+  # Block dangerous operations without review
+  block_drop_index_without_review: true
+  block_drop_table_without_review: true
+
+  # Require rollback for all migrations
+  require_rollback_for_all: true
+
+  # Require CONCURRENTLY for index creation (avoid locks)
+  require_concurrent_index: true
+
+  # Auto-approve low-impact changes (skip review)
+  auto_approve_if_impact_low: true
+
+  # Block column type changes (can be destructive)
+  block_column_type_change: false
+
+  # Maximum risk level allowed without manual approval
+  max_risk_level: "high"
+
+# Global limits
+global_max_severity: "warning"  # Block PRs with critical findings
+global_max_findings: 10         # Max total findings across all queries

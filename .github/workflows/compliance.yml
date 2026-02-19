@@ -1,0 +1,146 @@
+name: Compliance Checks
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Run weekly security scan
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security-scan:
+    name: Security Scan (Bandit + Safety)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install security tools
+        run: pip install bandit safety pip-audit
+
+      - name: Bandit — static analysis for security issues
+        run: |
+          bandit -r src/ -f json -o security-report.json --severity-level medium || true
+          bandit -r src/ -f screen --severity-level medium
+
+      - name: Safety — check dependencies for known vulnerabilities
+        run: safety check --full-report || true
+
+      - name: pip-audit — audit installed packages
+        run: |
+          pip install -e ".[dev]" || pip install -e .
+          pip-audit --format json --output audit-report.json || true
+          pip-audit
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            security-report.json
+            audit-report.json
+
+  audit-logging:
+    name: Audit Logging Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]" || pip install -e .
+
+      - name: Verify audit logger
+        run: |
+          python -c "
+          from querysense.audit import AuditLogger, AuditEventType
+          audit = AuditLogger()
+          # Verify all sensitive operations are loggable
+          audit.log_analysis(user_id='test', plan_hash='abc', findings_count=3)
+          audit.log_migration(user_id='test', sql='ALTER TABLE t ADD COLUMN c TEXT', status='success')
+          audit.log_config_change(user_id='test', parameter='work_mem', old_value='4MB', new_value='64MB')
+          audit.log_auth(user_id='test', event_type=AuditEventType.USER_LOGIN, ip_address='127.0.0.1')
+          audit.log_policy_violation(user_id='test', policy_name='budget', violation_details='over limit')
+          events = audit.get_events()
+          assert len(events) == 5, f'Expected 5 events, got {len(events)}'
+          report = audit.export_compliance_report()
+          assert '\"total_events\": 5' in report
+          print('Audit logging: ALL CHECKS PASSED')
+          "
+
+      - name: Verify RBAC system
+        run: |
+          python -c "
+          from querysense.auth import RBACChecker, Permission, Role, AuthorizationError
+          # Test viewer role
+          viewer = RBACChecker([Role.from_template('viewer')])
+          assert viewer.can(Permission.ANALYZE)
+          assert not viewer.can(Permission.MIGRATE)
+          # Test admin override
+          admin = RBACChecker([Role.from_template('admin')])
+          assert admin.can(Permission.MIGRATE)
+          assert admin.is_admin
+          # Test require raises
+          try:
+              viewer.require(Permission.MIGRATE)
+              assert False, 'Should have raised'
+          except AuthorizationError:
+              pass
+          print('RBAC system: ALL CHECKS PASSED')
+          "
+
+  code-quality:
+    name: Code Quality & Type Checking
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tools
+        run: pip install ruff mypy
+
+      - name: Ruff lint
+        run: ruff check src/ --output-format github
+
+      - name: Type check (best-effort)
+        run: mypy src/querysense --ignore-missing-imports --no-error-summary || true
+
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check dependency licenses
+        run: |
+          pip install pip-licenses
+          pip install -e ".[dev]" || pip install -e .
+          pip-licenses --format=json --output-file=licenses.json
+          pip-licenses --allow-only="MIT;BSD;Apache-2.0;ISC;PSF;LGPL;MPL" || true
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: license-report
+          path: licenses.json

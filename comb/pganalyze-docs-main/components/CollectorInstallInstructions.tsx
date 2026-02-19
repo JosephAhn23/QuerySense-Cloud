@@ -1,0 +1,56 @@
+import React from 'react'
+import { useCodeBlock } from './CodeBlock'
+
+import RepositorySigningKey from './RepositorySigningKey'
+
+type Props = {
+  apiKey?: string
+  guided?: boolean
+}
+
+const CollectorInstallInstructions: React.FunctionComponent<Props> = ({apiKey, guided}) => {
+  const env: {
+    PGA_API_KEY?: string;
+    PGA_GUIDED_SETUP?: string;
+  } = {};
+  if (apiKey) {
+    env['PGA_API_KEY'] = apiKey
+  }
+  if (guided) {
+    env['PGA_GUIDED_SETUP'] = 'true'
+  }
+
+  return <CollectorEnvInstallInstructions env={env} hideManualInstall={guided} />
+}
+
+const CollectorEnvInstallInstructions: React.FunctionComponent<{
+  env: { [key: string]: string },
+  hideManualInstall?: boolean,
+}> = ({env, hideManualInstall}) => {
+  const CodeBlock = useCodeBlock();
+  let bashCmd: string;
+  if (Object.keys(env).length === 0) {
+    bashCmd = 'bash';
+  } else {
+    bashCmd = Object.entries(env).reduce((cmdStr, [ nextKey, nextVal ]) => {
+      return cmdStr + ` ${nextKey}=${nextVal}`
+    }, 'env') + ' bash'
+  }
+  return (
+    <>
+      {!hideManualInstall && <p>
+        We recommend running our install script to automatically detect your platform and
+        install the correct package:
+      </p>}
+      <CodeBlock language="bash">
+        {`curl https://packages.pganalyze.com/collector-install.sh | ${bashCmd}`}
+      </CodeBlock>
+      <RepositorySigningKey small />
+      {!hideManualInstall && <p>
+        Alternately, you can follow the <a href="https://pganalyze.com/docs/collector/packages">manual install instructions</a>.
+      </p>}
+    </>
+  )
+}
+
+export default CollectorInstallInstructions;

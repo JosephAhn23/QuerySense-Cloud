@@ -1,0 +1,100 @@
+name: QuerySense Migration Check
+
+# Automatically analyze migration files when they change in PRs
+on:
+  pull_request:
+    paths:
+      - 'migrations/**/*.sql'
+      - 'db/migrations/**/*.sql'
+      - 'alembic/**/*.py'
+      - 'sql/**/*.sql'
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  analyze-migrations:
+    name: Analyze Migration Safety
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install QuerySense
+        run: pip install querysense
+
+      - name: Find changed migration files
+        id: changes
+        run: |
+          # Get migration files changed in this PR
+          MIGRATION_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD -- \
+            'migrations/**/*.sql' 'db/migrations/**/*.sql' 'sql/**/*.sql' | head -20)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$MIGRATION_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "count=$(echo "$MIGRATION_FILES" | grep -c '.' || true)" >> $GITHUB_OUTPUT
+
+      - name: Analyze migrations
+        if: steps.changes.outputs.count > 0
+        run: |
+          REPORT_DIR=$(mktemp -d)
+          COMBINED_REPORT=""
+          EXIT_CODE=0
+
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            echo "::group::Analyzing $file"
+
+            # Run prediction
+            querysense predict --file "$file" --json > "$REPORT_DIR/$(basename "$file").json" 2>&1 || true
+
+            # Check risk level
+            RISK=$(jq -r '.overall_risk' "$REPORT_DIR/$(basename "$file").json" 2>/dev/null || echo "unknown")
+            echo "Risk: $RISK"
+
+            if [ "$RISK" = "critical" ] || [ "$RISK" = "high" ]; then
+              EXIT_CODE=1
+              echo "::error file=$file::Migration has $RISK risk level"
+            elif [ "$RISK" = "medium" ]; then
+              echo "::warning file=$file::Migration has medium risk level"
+            fi
+
+            echo "::endgroup::"
+          done <<< "${{ steps.changes.outputs.files }}"
+
+          # Generate combined report for PR comment
+          echo '{"files": [' > "$REPORT_DIR/combined.json"
+          FIRST=true
+          for f in "$REPORT_DIR"/*.json; do
+            [ "$(basename "$f")" = "combined.json" ] && continue
+            if [ "$FIRST" = true ]; then FIRST=false; else echo "," >> "$REPORT_DIR/combined.json"; fi
+            echo "{\"filename\": \"$(basename "$f" .json)\", \"report\": $(cat "$f")}" >> "$REPORT_DIR/combined.json"
+          done
+          echo ']}'  >> "$REPORT_DIR/combined.json"
+
+          echo "report_dir=$REPORT_DIR" >> $GITHUB_OUTPUT
+          exit $EXIT_CODE
+
+      - name: Comment on PR
+        if: always() && steps.changes.outputs.count > 0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Post analysis as PR comment for each changed migration
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            querysense comment-pr \
+              --migration "$file" \
+              --github-token "$GITHUB_TOKEN" \
+              --repo "${{ github.repository }}" \
+              --pr "${{ github.event.pull_request.number }}" || true
+          done <<< "${{ steps.changes.outputs.files }}"

@@ -1,0 +1,19 @@
+- mount: explain
+  items:
+  - name: Overview
+    href: explain
+  - name: The Basics of Postgres Query Planning
+    href: explain/basics-of-postgres-query-planning
+  # Note we don't mount "Setup" here, since thats linked in the Installation Guide ToC instead
+  - name: EXPLAIN Grid view
+    href: explain/grid
+  - name: Comparing EXPLAIN plans
+    href: explain/plan-comparison
+  - name: Insights
+    href: explain/insights
+  - name: Scan nodes
+    href: explain/scan-nodes
+  - name: Join nodes
+    href: explain/join-nodes
+  - name: Other nodes
+    href: explain/other-nodes

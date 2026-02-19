@@ -1,0 +1,148 @@
+# Default values for pganalyze-collector.
+
+replicaCount: 1
+
+image:
+  repository: quay.io/pganalyze/collector
+  # -- Overrides the image pull policy.
+  pullPolicy: IfNotPresent
+  # -- Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# -- Environment variables to be passed to the container
+# Config settings can be defined here, or can be defined via configMap + secret
+extraEnv: {}
+#   DB_HOST: your_database_host
+#   DB_NAME: your_database_name
+#   DB_ALL_NAMES: true (monitor all databases on the server)
+#   DB_USERNAME: your_monitoring_user
+
+# -- Environment variables to be passed to the container
+# Config settings can be defined in raw form, for use with externally maintained env value sources (configMapKeyRef, fieldRef, resourceFieldRef, secretKeyRef)
+extraEnvRaw: []
+  # - name: PGA_API_KEY
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: pganalyze
+  #       key: api-key
+
+configMap:
+  # -- Specifies whether a config map should be created.
+  # The config map can be used to set runtime environment variables
+  create: false
+  # -- The name of the config map to load environment variables from.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  # -- Values to initialize the ConfigMap with.
+  # Only applicable if create is true
+  values: {}
+  #   DB_HOST: your_database_host
+  #   DB_NAME: your_database_name
+  #   DB_ALL_NAMES: true (monitor all databases on the server)
+  #   DB_USERNAME: your_monitoring_user
+
+secret:
+  # -- Specifies whether a secret should be created.
+  # The secret can be used to set sensitive runtime environment variables
+  create: false
+  # -- The name of the secret to load environment variables from.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  # -- Values to initialize the Secret with.
+  # Only applicable if create is true
+  values: {}
+  #   PGA_API_KEY: your_pganalyze_api_key
+  #   DB_PASSWORD: your_database_password
+
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+service:
+  # -- Specifies whether a service should be created for receiving logs via OpenTelemetry.
+  # This service is used when Postgres is running within the cluster and Postgres logs
+  # are sent out to the collector using log collectors like Fluent Bit
+  create: false
+  # -- The name of the service to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  # This is the name referenced by the log sender like Fluent Bit
+  name: pganalyze-collector-otel-service
+  # -- The type of service to create.
+  type: ClusterIP
+  # -- The port of service.
+  # This is the port referenced by the log sender like Fluent Bit
+  port: 4318
+  # -- The target port of the log OTEL server port.
+  # This should match to the port number specified with db_log_otel_server
+  targetPort: 4318
+  # -- The list of port and target ports for OTEL logging.
+  # When this is specified, above port and targetPort will be ignored.
+  # If you need to have multiple log OTEL servers, use this.
+  ports:
+    - name: otel1
+      port: 4318
+      targetPort: 4318
+    - name: otel2
+      port: 4319
+      targetPort: 4319
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 1000m
+    memory: 1024Mi
+
+# -- List of volumes to attach to the pod
+volumes:
+  - name: scratch
+    emptyDir: {}
+
+# -- List of volume mounts to attach to the container
+volumeMounts:
+  - mountPath: /tmp
+    name: scratch
+    subPath: tmp
+  - mountPath: /state
+    name: scratch
+    subPath: state
+  - mountPath: /config
+    name: scratch
+    subPath: config
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

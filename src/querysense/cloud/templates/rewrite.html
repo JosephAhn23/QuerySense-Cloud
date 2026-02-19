@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Rewriter — QuerySense{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">SQL Rewriter</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Automated query optimization — 14 safe rewrite patterns</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Input Panel -->
+        <div>
+            <form id="rewrite-form" hx-post="/rewrite" hx-target="#rewrite-result" hx-indicator="#rewrite-spinner">
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-4">
+                    <label class="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                        SQL Query
+                    </label>
+                    <textarea name="sql" id="sql-input" rows="12" required
+                        class="block w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 px-4 py-3 font-mono text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-y"
+                        placeholder="SELECT *
+FROM orders o
+WHERE o.customer_id NOT IN (
+    SELECT id FROM customers WHERE status = 'inactive'
+)
+ORDER BY created_at DESC;">{{ sql or '' }}</textarea>
+
+                    <div class="mt-4 flex items-center gap-3">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Optional: Paste EXPLAIN JSON for finding-guided rewrites
+                        </label>
+                    </div>
+                    <textarea name="plan_json" id="plan-input" rows="4"
+                        class="mt-2 block w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 px-4 py-3 font-mono text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-y"
+                        placeholder='[{"Plan": {"Node Type": "Seq Scan", ...}}]'>{{ plan_json or '' }}</textarea>
+                </div>
+
+                <button type="submit"
+                    class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-sm transition-colors duration-150">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    Optimize Query
+                    <span id="rewrite-spinner" class="htmx-indicator">
+                        <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </span>
+                </button>
+            </form>
+
+            <!-- Pattern Catalog -->
+            <div class="mt-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Supported Rewrite Patterns</h3>
+                <div class="space-y-2">
+                    {% set patterns = [
+                        ("NOT IN → NOT EXISTS", "NULL-safe, index-friendly", "95%"),
+                        ("IN subquery → EXISTS", "Short-circuits, uses indexes", "90%"),
+                        ("IN subquery → JOIN", "Enables hash/merge strategies", "85%"),
+                        ("OR chain → IN clause", "Cleaner, same performance", "100%"),
+                        ("OR across columns → UNION ALL", "Enables per-branch indexes", "75%"),
+                        ("DISTINCT → GROUP BY", "Can leverage indexes", "85%"),
+                        ("UNION → UNION ALL", "Avoids sort for dedup", "70%"),
+                        ("SELECT DISTINCT * removal", "Almost never correct", "90%"),
+                        ("COUNT(*) → approximate", "Instant via pg_class", "70%"),
+                        ("COALESCE in WHERE → explicit", "Restores index usage", "90%"),
+                        ("LOWER() → expression index", "CREATE INDEX guidance", "80%"),
+                        ("LIKE '%...' → pg_trgm", "GIN index guidance", "70%"),
+                        ("Correlated subquery detection", "JOIN suggestion", "60%"),
+                        ("SELECT * flagging", "Column reduction", "50%"),
+                    ] %}
+                    {% for name, desc, conf in patterns %}
+                    <div class="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-mono font-medium text-brand-600 dark:text-brand-400">{{ name }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-gray-400 dark:text-gray-500 hidden sm:inline">{{ desc }}</span>
+                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded-full
+                                {% if conf|int >= 90 %}bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400
+                                {% elif conf|int >= 70 %}bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400
+                                {% else %}bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400{% endif %}">{{ conf }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Panel -->
+        <div id="rewrite-result">
+            {% if result %}
+                {% include "partials/rewrite_result.html" %}
+            {% else %}
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
+                <svg class="w-12 h-12 text-gray-300 dark:text-slate-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Paste a SQL query and click <strong>Optimize Query</strong> to see rewrite suggestions.
+                </p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                    14 patterns &middot; NULL-safe &middot; Confidence-scored
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- CLI Usage -->
+    <div class="mt-8 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-slate-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">CLI Usage</h3>
+        <div class="space-y-2">
+            <div class="bg-gray-900 dark:bg-slate-900 rounded-lg px-4 py-3">
+                <code class="text-sm text-green-400 font-mono">$ querysense rewrite --sql "SELECT * FROM orders WHERE id NOT IN (SELECT order_id FROM returns)"</code>
+            </div>
+            <div class="bg-gray-900 dark:bg-slate-900 rounded-lg px-4 py-3">
+                <code class="text-sm text-green-400 font-mono">$ querysense rewrite --file slow_query.sql --plan explain.json --output optimized.sql</code>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
+            The CLI rewriter uses the same engine. Add <code class="text-brand-600 dark:text-brand-400">--plan</code> with EXPLAIN JSON for finding-guided optimizations.
+        </p>
+    </div>
+</div>
+{% endblock %}

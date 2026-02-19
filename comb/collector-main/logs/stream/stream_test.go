@@ -1,0 +1,398 @@
+package stream_test
+
+import (
+	"log"
+	"os"
+	"sort"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/kylelemons/godebug/pretty"
+	"github.com/pganalyze/collector/config"
+	"github.com/pganalyze/collector/logs/stream"
+	"github.com/pganalyze/collector/output/pganalyze_collector"
+	"github.com/pganalyze/collector/state"
+	"github.com/pganalyze/collector/util"
+)
+
+type streamTestpair struct {
+	logLines          []state.LogLine
+	TransientLogState state.TransientLogState
+	logFile           state.LogFile
+	logFileContent    string
+	tooFreshLogLines  []state.LogLine
+	err               error
+}
+
+var now = time.Now()
+
+var streamTests = []streamTestpair{
+	// Simple case
+	{
+		[]state.LogLine{{
+			CollectedAt: now.Add(-5 * time.Second),
+			LogLevel:    pganalyze_collector.LogLineInformation_LOG,
+			Content:     "duration: 10003.847 ms  statement: SELECT pg_sleep(10);\n",
+		}},
+		state.TransientLogState{
+			QuerySamples: []state.PostgresQuerySample{{
+				Query:     "SELECT pg_sleep(10);",
+				RuntimeMs: 10003.847,
+			}},
+		},
+		state.LogFile{
+			LogLines: []state.LogLine{{
+				CollectedAt:        now.Add(-5 * time.Second),
+				LogLevel:           pganalyze_collector.LogLineInformation_LOG,
+				ByteEnd:            56,
+				Query:              "SELECT pg_sleep(10);",
+				Classification:     80,
+				ReviewedForSecrets: true,
+				SecretMarkers: []state.LogSecretMarker{{
+					ByteStart: 35,
+					ByteEnd:   55,
+					Kind:      3,
+				}},
+			}},
+		},
+		"duration: 10003.847 ms  statement: SELECT pg_sleep(10);\n",
+		[]state.LogLine{},
+		nil,
+	},
+	// Too fresh
+	{
+		[]state.LogLine{{
+			CollectedAt: now,
+			LogLevel:    pganalyze_collector.LogLineInformation_LOG,
+			Content:     "duration: 10003.847 ms  statement: SELECT pg_sleep(10);\n",
+		}},
+		state.TransientLogState{},
+		state.LogFile{},
+		"",
+		[]state.LogLine{{
+			CollectedAt: now,
+			LogLevel:    pganalyze_collector.LogLineInformation_LOG,
+			Content:     "duration: 10003.847 ms  statement: SELECT pg_sleep(10);\n",
+		}},
+		nil,
+	},
+	// Multiple lines (all of same timestamp)
+	{
+		[]state.LogLine{{
+			CollectedAt: now.Add(-5 * time.Second),
+			LogLevel:    pganalyze_collector.LogLineInformation_ERROR,
+			Content:     "permission denied for function pg_reload_conf\n",
+		},
+			{
+				CollectedAt: now.Add(-5 * time.Second),
+				LogLevel:    pganalyze_collector.LogLineInformation_STATEMENT,
+				Content:     "SELECT pg_reload_conf();\n",
+			}},
+		state.TransientLogState{},
+		state.LogFile{
+			LogLines: []state.LogLine{{
+				CollectedAt:        now.Add(-5 * time.Second),
+				LogLevel:           pganalyze_collector.LogLineInformation_ERROR,
+				ByteEnd:            46,
+				Query:              "SELECT pg_reload_conf();\n",
+				Classification:     123,
+				ReviewedForSecrets: true,
+			},
+				{
+					CollectedAt:        now.Add(-5 * time.Second),
+					LogLevel:           pganalyze_collector.LogLineInformation_STATEMENT,
+					ByteStart:          46,
+					ByteContentStart:   46,
+					ByteEnd:            71,
+					ReviewedForSecrets: true,
+					SecretMarkers: []state.LogSecretMarker{{
+						ByteEnd: 25,
+						Kind:    state.StatementTextLogSecret,
+					}},
+				}},
+		},
+		"permission denied for function pg_reload_conf\nSELECT pg_reload_conf();\n",
+		[]state.LogLine{},
+		nil,
+	},
+	// Multiple lines (different timestamps, skips freshness check due to missing level *and PID*)
+	{
+		[]state.LogLine{{
+			CollectedAt: now.Add(-5 * time.Second),
+			LogLevel:    pganalyze_collector.LogLineInformation_LOG,
+			Content:     "LOG:  duration: 10010.397 ms  statement: SELECT pg_sleep(10\n",
+		},
+			{
+				CollectedAt: now,
+				Content:     " );\n",
+			}},
+		state.TransientLogState{},
+		state.LogFile{
+			LogLines: []state.LogLine{{
+				CollectedAt: now.Add(-5 * time.Second),
+				LogLevel:    pganalyze_collector.LogLineInformation_LOG,
+				ByteEnd:     64,
+			}},
+		},
+		"LOG:  duration: 10010.397 ms  statement: SELECT pg_sleep(10\n );\n",
+		[]state.LogLine{},
+		nil,
+	},
+	// Multiple lines (different timestamps, skips freshness check due to missing level *and PID* only for unknown lines)
+	{
+		[]state.LogLine{{
+			CollectedAt:   now.Add(-5 * time.Second),
+			LogLevel:      pganalyze_collector.LogLineInformation_LOG,
+			LogLineNumber: 2,
+			BackendPid:    42,
+			Content:       "LOG:  duration: 10010.397 ms  statement: SELECT pg_sleep(10\n",
+		},
+			{
+				CollectedAt: now,
+				Content:     " );\n",
+			}},
+		state.TransientLogState{},
+		state.LogFile{
+			LogLines: []state.LogLine{{
+				CollectedAt:   now.Add(-5 * time.Second),
+				LogLevel:      pganalyze_collector.LogLineInformation_LOG,
+				ByteEnd:       64,
+				LogLineNumber: 2,
+				BackendPid:    42,
+			}},
+		},
+		"LOG:  duration: 10010.397 ms  statement: SELECT pg_sleep(10\n );\n",
+		[]state.LogLine{},
+		nil,
+	},
+	// Multiple lines (different timestamps, requiring skip of freshness check due to log line number)
+	//
+	// Note that this refers to the Heroku case, where we have log line numbers on unidentified lines
+	// (because logplex adds them, not Postgres itself, like in other cases)
+	{
+		[]state.LogLine{{
+			CollectedAt:   now,
+			LogLineNumber: 2,
+			BackendPid:    42,
+			Content:       "second\n",
+		},
+			{
+				CollectedAt:   now.Add(-5 * time.Second),
+				LogLevel:      pganalyze_collector.LogLineInformation_LOG,
+				LogLineNumber: 1,
+				BackendPid:    42,
+				Content:       "first\n",
+			}},
+		state.TransientLogState{},
+		state.LogFile{
+			LogLines: []state.LogLine{{
+				CollectedAt:   now.Add(-5 * time.Second),
+				LogLevel:      pganalyze_collector.LogLineInformation_LOG,
+				LogLineNumber: 1,
+				ByteEnd:       13,
+				BackendPid:    42,
+			}},
+		},
+		"first\nsecond\n",
+		[]state.LogLine{},
+		nil,
+	},
+	// Multiple lines not concatenated yet (use case for self-managed systems and long texts on GCP)
+	{
+		[]state.LogLine{
+			{
+				CollectedAt: now.Add(-10 * time.Second),
+				OccurredAt:  now.Add(-10 * time.Second),
+				LogLevel:    pganalyze_collector.LogLineInformation_LOG,
+				BackendPid:  80,
+				Content:     "zero\n",
+			},
+			{
+				CollectedAt: now.Add(-5 * time.Second),
+				OccurredAt:  now.Add(-5 * time.Second),
+				LogLevel:    pganalyze_collector.LogLineInformation_LOG,
+				BackendPid:  42,
+				Content:     "first\n",
+			},
+			{
+				CollectedAt: now.Add(-5 * time.Second),
+				Content:     "second\n",
+			},
+			{
+				CollectedAt: now.Add(-4 * time.Second),
+				OccurredAt:  now.Add(-4 * time.Second),
+				LogLevel:    pganalyze_collector.LogLineInformation_ERROR,
+				BackendPid:  77,
+				Content:     "third\n",
+			},
+		},
+		state.TransientLogState{},
+		state.LogFile{
+			LogLines: []state.LogLine{
+				{
+					CollectedAt: now.Add(-10 * time.Second),
+					OccurredAt:  now.Add(-10 * time.Second),
+					LogLevel:    pganalyze_collector.LogLineInformation_LOG,
+					ByteEnd:     5,
+					BackendPid:  80,
+				},
+				{
+					CollectedAt:      now.Add(-5 * time.Second),
+					OccurredAt:       now.Add(-5 * time.Second),
+					LogLevel:         pganalyze_collector.LogLineInformation_LOG,
+					ByteStart:        5,
+					ByteContentStart: 5,
+					ByteEnd:          18,
+					BackendPid:       42,
+				},
+				{
+					CollectedAt:      now.Add(-4 * time.Second),
+					OccurredAt:       now.Add(-4 * time.Second),
+					LogLevel:         pganalyze_collector.LogLineInformation_ERROR,
+					ByteStart:        18,
+					ByteContentStart: 18,
+					ByteEnd:          24,
+					BackendPid:       77,
+				},
+			},
+		},
+		"zero\nfirst\nsecond\nthird\n",
+		[]state.LogLine{},
+		nil,
+	},
+	// Multiple lines not concatenated yet (out of order messages, can occur for long texts on GCP)
+	{
+		[]state.LogLine{{
+			CollectedAt: now.Add(-5 * time.Second),
+			OccurredAt:  now.Add(-4 * time.Second),
+			Content:     " );\n",
+		},
+			{
+				CollectedAt:   now.Add(-4 * time.Second),
+				OccurredAt:    now.Add(-5 * time.Second),
+				LogLevel:      pganalyze_collector.LogLineInformation_LOG,
+				LogLineNumber: 2,
+				BackendPid:    42,
+				Content:       "LOG:  duration: 10010.397 ms  statement: SELECT pg_sleep(10\n",
+			}},
+		state.TransientLogState{},
+		state.LogFile{
+			LogLines: []state.LogLine{{
+				CollectedAt:   now.Add(-4 * time.Second),
+				OccurredAt:    now.Add(-5 * time.Second),
+				LogLevel:      pganalyze_collector.LogLineInformation_LOG,
+				ByteEnd:       64,
+				LogLineNumber: 2,
+				BackendPid:    42,
+			}},
+		},
+		"LOG:  duration: 10010.397 ms  statement: SELECT pg_sleep(10\n );\n",
+		[]state.LogLine{},
+		nil,
+	},
+	{
+		[]state.LogLine{
+			{
+				CollectedAt: now.Add(-4 * time.Second),
+				OccurredAt:  now.Add(-4 * time.Second),
+				LogLevel:    pganalyze_collector.LogLineInformation_LOG,
+				BackendPid:  80,
+				Content:     "main\n",
+			},
+			{
+				CollectedAt: now.Add(-2 * time.Second),
+				OccurredAt:  now.Add(-2 * time.Second),
+				LogLevel:    pganalyze_collector.LogLineInformation_DETAIL,
+				BackendPid:  92,
+				Content:     "other-detail\n",
+			},
+			{
+				CollectedAt: now.Add(-2 * time.Second),
+				OccurredAt:  now.Add(-4 * time.Second),
+				LogLevel:    pganalyze_collector.LogLineInformation_DETAIL,
+				BackendPid:  80,
+				Content:     "detail\n",
+			},
+		},
+		state.TransientLogState{},
+		state.LogFile{
+			LogLines: []state.LogLine{
+				{
+					CollectedAt: now.Add(-4 * time.Second),
+					OccurredAt:  now.Add(-4 * time.Second),
+					LogLevel:    pganalyze_collector.LogLineInformation_LOG,
+					ByteEnd:     5,
+					BackendPid:  80,
+				},
+				{
+					CollectedAt:      now.Add(-2 * time.Second),
+					OccurredAt:       now.Add(-4 * time.Second),
+					LogLevel:         pganalyze_collector.LogLineInformation_DETAIL,
+					ByteStart:        5,
+					ByteContentStart: 5,
+					ByteEnd:          12,
+					BackendPid:       80,
+				},
+			},
+		},
+		"main\ndetail\n",
+		[]state.LogLine{
+			{
+				CollectedAt: now.Add(-2 * time.Second),
+				OccurredAt:  now.Add(-2 * time.Second),
+				LogLevel:    pganalyze_collector.LogLineInformation_DETAIL,
+				BackendPid:  92,
+				Content:     "other-detail\n",
+			},
+		},
+		nil,
+	},
+	//{
+	// There should be a test for this method
+	// - Pass in two logLines, one at X, one at X + 2, and assume the time is x + 3
+	// - These lines should be concatenated based on the log line number, ignoring the fact the the second log line would be considered too fresh
+	//	[]state.LogLine{{
+	//
+	//	}},
+	//},
+}
+
+func TestAnalyzeStreamInGroups(t *testing.T) {
+	for _, pair := range streamTests {
+		server := state.MakeServer(config.ServerConfig{}, false)
+		TransientLogState, logFile, tooFreshLogLines, err := stream.AnalyzeStreamInGroups(pair.logLines, now, server, &util.Logger{Destination: log.New(os.Stderr, "", log.LstdFlags)})
+		TransientLogState.CollectedAt = time.Time{} // Avoid comparing against time.Now()
+		logFile.UUID = uuid.UUID{}                  // Avoid comparing against a generated UUID
+		cfg := pretty.CompareConfig
+		cfg.SkipZeroFields = true
+
+		if diff := cfg.Compare(pair.TransientLogState, TransientLogState); diff != "" {
+			t.Errorf("For %v: log state diff: (-want +got)\n%s", pair.TransientLogState, diff)
+		}
+		sort.SliceStable(pair.logFile.LogLines, func(i, j int) bool {
+			return pair.logFile.LogLines[i].ByteStart < pair.logFile.LogLines[j].ByteStart
+		})
+		sort.SliceStable(logFile.LogLines, func(i, j int) bool {
+			return logFile.LogLines[i].ByteStart < logFile.LogLines[j].ByteStart
+		})
+		logFileContent := ""
+		for idx, logLine := range logFile.LogLines {
+			logFileContent += logLine.Content
+			logFile.LogLines[idx].Content = ""
+		}
+
+		if diff := cfg.Compare(pair.logFile, logFile); diff != "" {
+			t.Errorf("For %v: log file diff: (-want +got)\n%s", pair.logFile, diff)
+		}
+		if diff := cfg.Compare(pair.logFileContent, logFileContent); diff != "" {
+			t.Errorf("For %v: log state diff: (-want +got)\n%s", pair.logFileContent, diff)
+		}
+		if diff := cfg.Compare(pair.tooFreshLogLines, tooFreshLogLines); diff != "" {
+			t.Errorf("For %v: too fresh log lines diff: (-want +got)\n%s", pair.tooFreshLogLines, diff)
+		}
+		if diff := cfg.Compare(pair.err, err); diff != "" {
+			t.Errorf("For %v: err diff: (-want +got)\n%s", pair.err, diff)
+		}
+	}
+}

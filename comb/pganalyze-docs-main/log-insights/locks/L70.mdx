@@ -1,0 +1,48 @@
+---
+log_classification: L70
+log_title: Process acquired lock
+log_category: locks
+collector_key: LOCK_ACQUIRED
+tooltip: Lock was successfully acquired after exceeding deadlock_timeout
+urgency: low
+sqlstate: n/a
+color: "#FF7F50"
+---
+
+**Example Postgres Log Output:**
+
+```
+LOG: process 583 acquired AccessExclusiveLock on relation 185044 of database 16384 after 2175.443 ms
+STATEMENT: ALTER TABLE x ADD COLUMN y text;
+```
+
+```
+LOG: process 25307 acquired ExclusiveLock on tuple (106,38) of relation 16421 of database 16385 after 1129279.295 ms
+```
+
+```
+LOG: process 21813 acquired ExclusiveLock on extension of relation 419652 of database 16400 after 1003.994 ms
+```
+
+**Explanation:**
+
+This message is logged if `log_lock_waits = on`, a lock is successfully acquired, and `deadlock_timeout` is exceeded (default 1s).
+
+Note that this does not have anything to do with deadlocks, despite the output being controlled by `deadlock_timeout` - since walking through lock information is an expensive task, Postgres only performs this operation in order to detect deadlocks, and the log details we get for any other locks are simply a side effect.
+
+The log event can be useful to determine lock contention, as it tells you for which rows/objects/tables it took a significant time to acquire the lock.
+
+**Recommended Action:**
+
+No direct action is necessary based on this event, but if you see a lot of these
+it makes sense to review the kind of statements that are associated with the long
+lock wait.
+
+It may also make sense to review any other concurrent activity (e.g. DDL) that could
+have caused something to be exclusively locked. This is particularly the case if
+you see a lot of these notices occur at the same time, after DDL has finished
+executing.
+
+**Learn More:**
+
+* [pganalyze Guide: Monitoring Postgres locks using Log Insights](/docs/guides/monitoring-postgres-locks-using-log-insights)

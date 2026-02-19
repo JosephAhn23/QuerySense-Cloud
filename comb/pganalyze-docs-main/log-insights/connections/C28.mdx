@@ -1,0 +1,33 @@
+---
+work_in_progress: true
+log_classification: C28
+log_title: Too many connections
+log_category: connections
+collector_key: OUT_OF_CONNECTIONS
+tooltip: The number of connections has exceeded the max_connections setting
+urgency: high
+sqlstate: "53300 (Class 53 - Insufficient Resources: too_many_connections)"
+color: "#ff0000"
+---
+
+**Example Postgres Log Output:**
+
+```
+FATAL: remaining connection slots are reserved for non-replication superuser connections
+```
+
+```
+FATAL: sorry, too many clients already
+```
+
+**Explanation:**
+
+...
+
+**Recommended Action:**
+
+...
+
+**Learn More:**
+
+No additional resources available.

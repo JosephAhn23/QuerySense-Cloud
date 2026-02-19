@@ -1,0 +1,12 @@
+/pganalyze-collector
+/pganalyze-collector-helper
+/pganalyze-collector-setup
+packages/tmp
+/tmp
+integration_test/*.json
+integration_test/*.out
+coverage.out
+bin/
+.idea/
+protoc/
+.DS_Store

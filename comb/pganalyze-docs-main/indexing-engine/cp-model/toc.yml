@@ -1,0 +1,12 @@
+- mount: indexing-engine/cp-model
+  items:
+  - name: How The Model Works
+    href: indexing-engine/cp-model
+  - name: Built-in Configurations
+    href: indexing-engine/cp-model/built-in-configs
+  - name: Custom Configuration
+    href: indexing-engine/cp-model/settings
+  - name: Custom Configuration - Goals
+    href: indexing-engine/cp-model/goals
+  - name: Custom Configuration - Rules
+    href: indexing-engine/cp-model/rules

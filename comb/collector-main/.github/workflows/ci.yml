@@ -1,0 +1,77 @@
+name: CI
+
+# N.B.: release.yml should be updated to match as necessary
+permissions: {}
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    # Use new enough OS that has CGroupsv2 enabled (required by the integration tests)
+    runs-on: ubuntu-24.04-4-cores
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.25
+      id: go
+
+    - name: Set up protoc
+      uses: pganalyze/setup-protoc@v3
+      with:
+        version: 28.2
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Lint (go fmt)
+      run: |
+        test $(go fmt ./... | wc -l) -eq 0
+
+    - name: Lint (staticcheck)
+      uses: dominikh/staticcheck-action@024238d2898c874f26d723e7d0ff4308c35589a2 # v1.4.0
+      with:
+        version: "2025.1.1"
+        install-go: false
+
+    - name: Run tests
+      run: |
+        make build OUTFILE=pganalyze-collector-linux-amd64
+        make test
+        DOCKER_BUILDKIT=1 make integration_test
+        shellcheck contrib/install.sh
+
+  test_contrib:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Install vector
+      run: |
+        sudo bash -c "$(curl -L https://setup.vector.dev)"
+        sudo apt-get install vector
+
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Run tests (contrib/vector)
+      run: |
+        make -C contrib/vector test

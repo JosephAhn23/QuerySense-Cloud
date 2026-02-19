@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "select_type": "SIMPLE",
+    "table": "orders",
+    "partitions": null,
+    "type": "ALL",
+    "possible_keys": null,
+    "key": null,
+    "key_len": null,
+    "ref": null,
+    "rows": 250000,
+    "filtered": 10.0,
+    "Extra": "Using where"
+  }
+]

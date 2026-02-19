@@ -1,0 +1,76 @@
+# QuerySense Performance Budgets — Declarative query performance constraints
+#
+# Copy this to query-performance.yml and commit to your repo.
+# QuerySense CI will enforce these budgets on every PR.
+#
+# Usage:
+#   querysense budget check                     # Check all budgets
+#   querysense budget check --query get_user    # Check specific query
+#   querysense ci gate --budget query-performance.yml
+
+version: "1.0"
+
+# Default constraints for all queries (override per-query below)
+defaults:
+  max_cost: 50000
+  max_time_ms: 500
+  deny_seq_scan_above: 10000
+  require_index_scan: false
+
+# Reusable labels — tag queries with these for shared constraints
+labels:
+  hot_path:
+    max_time_ms: 10
+    max_cost: 500
+    require_index_scan: true
+    deny_seq_scan_above: 0
+
+  background_job:
+    max_time_ms: 5000
+    max_cost: 200000
+
+  reporting:
+    max_time_ms: 30000
+    max_cost: 500000
+
+# Per-query budgets — matched by name or SQL pattern
+budgets:
+  get_user_by_id:
+    sql_pattern: "SELECT.*FROM users WHERE id ="
+    max_cost: 100
+    max_time_ms: 5
+    require_index_scan: true
+    max_critical_findings: 0
+    alert: blocking          # Fails CI if violated
+    labels:
+      - hot_path
+
+  search_orders:
+    sql_pattern: "SELECT.*FROM orders WHERE.*status"
+    max_cost: 5000
+    max_time_ms: 50
+    deny_seq_scan_above: 1000
+    alert: warning
+
+  dashboard_query:
+    plan_file: plans/dashboard.json
+    max_cost: 20000
+    max_time_ms: 200
+    max_findings: 3
+    max_critical_findings: 0
+    alert: warning
+    labels:
+      - reporting
+
+  create_order:
+    sql_pattern: "INSERT INTO orders"
+    max_time_ms: 100
+    alert: critical
+
+  nightly_report:
+    sql_pattern: "SELECT.*GROUP BY.*HAVING"
+    max_cost: 500000
+    max_time_ms: 60000
+    alert: info
+    labels:
+      - background_job

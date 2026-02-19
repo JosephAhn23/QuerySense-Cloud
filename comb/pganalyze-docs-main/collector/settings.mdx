@@ -1,0 +1,815 @@
+---
+title: 'pganalyze Collector settings'
+backlink_href: /docs/collector
+backlink_title: 'pganalyze Collector'
+---
+
+import ToC from '../components/Toc'
+
+The collector can be configured through one of three mechanisms:
+
+1. Package-based install: `INI` config file, commonly in `/etc/pganalyze-collector.conf`
+2. Docker-based install: `INI` config passed via the `CONFIG_CONTENTS` environment variable
+3. Docker-based install: Individual environment variables for each setting (e.g. `DB_HOST`)
+
+Most settings can be configured through either `INI` config settings or individual environment variables. When you
+set individual environment variables in addition to the `INI` config, the environment variable settings apply to all
+monitored servers. If both are present, the `INI` config takes precedence.
+
+Note that a single collector instance can monitor more than one database server, by utilizing separate configuration
+sections in the `INI` config. Utilizing individual environment variables only supports configuring a single server.
+
+For the `INI` config, the `[pganalyze]` section describes settings that apply to all servers. Other sections
+describe the servers to monitor, how to connect to them, and server-specific configuration settings. You should
+name the other sections after the servers they correspond to, though note these are not the names that will appear
+in the app. In-app names are based on hostname settings as determined during monitoring.
+
+After you make changes, you can run `pganalyze-collector --test` to verify the new configuration.
+For package-based installs, if the test succeeds, this will automatically load the new configuration in the collector
+background process (equivalent to using the `--reload` flag). This minimizes monitoring interruptions and simplifies
+config file updates.
+
+The tables below list configuration settings, their defaults if not set, and their descriptions. If a setting is
+configurable through environment variables, the environment variable name follows the setting in parentheses.
+Boolean settings in both the `INI` config and environment variables can either be specified as `true`/`false`
+or `1`/`0` values.
+
+Note that these settings apply to the latest version of the collector.
+
+<ToC items={props.toc} />
+
+## General settings
+
+Common settings for configuring collector behavior, independent of the platform.
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>api_key (<code>PGA_API_KEY</code>)</td>
+      <td>n/a, required</td>
+      <td>
+        API key to authenticate the collector to the pganalyze app. We will show this
+        when adding a server in the app, and you can review it on your organization's
+        Settings page under the API keys tab.
+      </td>
+    </tr>
+    <tr>
+      <td>api_base_url (<code>PGA_API_BASE_URL</code>)</td>
+      <td>https://api.pganalyze.com</td>
+      <td>
+        Base URL for contacting the pganalyze API. You typically do not need to change this, unless you are
+        running <a href="/docs/enterprise">pganalyze Enterprise Server</a>.
+        <br /><br />
+        Note: The name of the environment variable was <code>PGA_API_BASEURL</code> prior to collector release v0.55.0.
+      </td>
+    </tr>
+    <tr>
+      <td>api_require_websocket (<code>API_REQUIRE_WEBSOCKET</code>)</td>
+      <td>false</td>
+      <td>
+        Enable to require a WebSocket connection to the pganalyze server, turning off the HTTP(S) fallback. WebSockets are more efficient for submitting snapshots, and are also required for the optional <a href="/docs/workbooks/collector-workflow">
+        Workbooks Collector Workflow</a>. A future collector release will change the default of this setting to true.
+      </td>
+    </tr>
+    <tr>
+      <td>api_cluster_id (<code>API_CLUSTER_ID</code>)</td>
+      <td>auto-detected</td>
+      <td>Identity of the cluster the server belongs to. Defaults to cluster ID retrieved from cloud provider APIs (if available), or to the Postgres database system identifier for self-managed servers.
+      </td>
+    </tr>
+    <tr>
+      <td>skip_if_replica (<code>SKIP_IF_REPLICA</code>)</td>
+      <td>false</td>
+      <td>Skip all metadata collection and snapshot submission while this server is a replica (according to <code>pg_is_in_recovery</code>).
+      When the server is promoted and is no longer a replica, automatically start collecting and submitting metadata as configured.
+      </td>
+    </tr>
+    <tr>
+      <td>enable_log_explain (<code>PGA_ENABLE_LOG_EXPLAIN</code>)</td>
+      <td>false</td>
+      <td>Enable log-based EXPLAIN. See <a href="/docs/explain/setup/log_explain">setup instructions</a>, but note
+      we recommend using <a href="/docs/explain/setup/auto_explain">auto_explain</a> instead if possible.
+      </td>
+    </tr>
+    <tr>
+      <td>max_buffer_cache_monitoring_gb (<code>MAX_BUFFER_CACHE_MONITORING_GB</code>)</td>
+      <td>200</td>
+      <td>Threshold in GB for enabling the <a href="/docs/schema-statistics/buffer-cache">Buffer Cache Statistics</a> feature. If the Postgres <code>shared_buffers</code> setting exceeds the threshold it is disabled.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+## Server connection settings
+
+How to connect to the server(s) pganalyze will be monitoring. Note that when monitoring multiple
+databases on the same server, the first specified is considered the primary database. This is where
+helper functions are expected to be defined, and the one we connect to for server-wide metrics.
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>db_url (<code>DB_URL</code>)</td>
+      <td>n/a, either this or individual settings below are required</td>
+      <td>URL of the database server to monitor</td>
+    </tr>
+    <tr>
+      <td>db_name (<code>DB_NAME</code>)</td>
+      <td>n/a, either this or db_url is required</td>
+      <td>Name of database to monitor; or, comma-separated list of all databases to monitor,
+      starting with primary (last entry can be <code>*</code> to monitor all databases on server)</td>
+    </tr>
+    <tr>
+      <td>db_username (<code>DB_USERNAME</code>)</td>
+      <td>n/a, either this or db_url is required</td>
+      <td>Postgres user to connect as (we recommend using the pganalyze monitoring user here)</td>
+    </tr>
+    <tr>
+      <td>db_password (<code>DB_PASSWORD</code>)</td>
+      <td>[none]</td>
+      <td>Password for the Postgres user</td>
+    </tr>
+    <tr>
+      <td>db_host (<code>DB_HOST</code>)</td>
+      <td>n/a, either this or db_url is required</td>
+      <td>
+        Host to connect to.<br /><br />Or, if connecting to a local server using <a href="https://www.postgresql.org/docs/current/auth-peer.html">peer authentication</a>, the path to a local unix domain socket as configured by <a href="https://www.postgresql.org/docs/current/runtime-config-connection.html#GUC-UNIX-SOCKET-DIRECTORIES">unix_socket_directories</a>.
+      </td>
+    </tr>
+    <tr>
+      <td>db_port (<code>DB_PORT</code>)</td>
+      <td>5432</td>
+      <td>Port to connect on</td>
+    </tr>
+    <tr>
+      <td>db_sslmode (<code>DB_SSLMODE</code>)</td>
+      <td>prefer</td>
+      <td>The <code>sslmode</code> setting to connect with (see <a target="_blank" href="https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-SSLMODE">Postgres documentation</a> for more details)</td>
+    </tr>
+    <tr>
+      <td>db_sslrootcert (<code>DB_SSLROOTCERT</code>)</td>
+      <td>system certificate store</td>
+      <td>Path to SSL certificate authority (CA) certificate(s) to use to verify the server's certificate, or <code>rds-ca-global</code> to use the built-in Amazon RDS global CA certificate set</td>
+    </tr>
+    <tr>
+      <td>db_sslrootcert_contents (<code>DB_SSLROOTCERT_CONTENTS</code>)</td>
+      <td>[none], see above</td>
+      <td>Alternative to above, using actual contents of the certificate(s) instead</td>
+    </tr>
+    <tr>
+      <td>db_sslcert (<code>DB_SSLCERT</code>)</td>
+      <td>[none]</td>
+      <td>Path to the client SSL certificate (optional, usually not required)</td>
+    </tr>
+    <tr>
+      <td>db_sslcert_contents (<code>DB_SSLCERT_CONTENTS</code>)</td>
+      <td>[none]</td>
+      <td>Alternative to above, using actual contents of the certificate instead</td>
+    </tr>
+    <tr>
+      <td>db_sslkey (<code>DB_SSLKEY</code>)</td>
+      <td>[none]</td>
+      <td>Path to the secret key used for the client certificate</td>
+    </tr>
+    <tr>
+      <td>db_sslkey_contents (<code>DB_SSLKEY_CONTENTS</code>)</td>
+      <td>[none]</td>
+      <td>Alternative to above, using actual contents of the key</td>
+    </tr>
+    <tr>
+      <td><code>DB_ALL_NAMES</code></td>
+      <td>false</td>
+      <td>Alternative to setting <code>*</code> as the last entry of db_name (<code>DB_NAME</code>) to
+      monitor all databases on the server. Can only be set using an environment variable.<br />
+      This is helpful when db_url (<code>DB_URL</code>) is used to specify a monitoring server (db_name is unused)
+      and you want to monitor all databases on that server.</td>
+    </tr>
+  </tbody>
+</table>
+
+## PII Filtering settings
+
+We take the responsibility of access to your database very seriously. As
+discussed above, we already limit the direct access we have to your data, but
+some personally-identifiable information or other sensitive values can still
+come up in query text or logs. To address this, the collector has several
+settings to filter these before we collect them. See [additional
+documentation](/docs/collector/pii-filtering) for details.
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>filter_log_secret (<code>FILTER_LOG_SECRET</code>)</td>
+      <td>credential, parsing_error, unidentified</td>
+      <td>Either <code>none</code>, <code>all</code>, or one or more of <code>credential</code>/<code>parsing_error</code>/<code>statement_text</code>/<code>statement_parameter</code>/<code>table_data</code>/<code>ops</code>/<code>unidentified</code> (comma separated)</td>
+    </tr>
+    <tr>
+      <td>filter_query_sample (<code>FILTER_QUERY_SAMPLE</code>)</td>
+      <td>none</td>
+      <td>Either <code>none</code>, <code>normalize</code> or <code>all</code></td>
+    </tr>
+    <tr>
+      <td>filter_query_text (<code>FILTER_QUERY_TEXT</code>)</td>
+      <td>unparsable</td>
+      <td>Either <code>none</code> or <code>unparsable</code></td>
+    </tr>
+  </tbody>
+</table>
+
+
+## Schema filter settings
+
+The pganalyze collector limits the number of schema objects (tables, views, etc.) that can be monitored on each database server. This limit is currently 5,000 tables or views per database server. If this limit is exceeded, no schema information will be collected.
+
+You can avoid reaching this limit by using the following setting to select which tables/views should be excluded:
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ignore_schema_regexp (<code>IGNORE_SCHEMA_REGEXP</code>)</td>
+      <td>[none]</td>
+      <td>Skip collecting metadata for all matching tables, schemas, or functions; match is checked against
+      schema-qualified object names (e.g. to ignore table "foo" only in the public schema, set to <code>^public\.foo$</code>)
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+To validate whether the setting is working as intended, you can run a query on your database server to count the number of monitored tables and views. Note you would have to run this on each database on the server and then summarize the counts, which should not exceed the 5,000 limit in aggregate:
+
+<CodeBlock language="sql">
+{`SELECT current_database() AS dbname,
+       COUNT(*) AS table_and_view_count
+  FROM pg_class c
+       LEFT JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace)
+ WHERE c.relkind IN ('r','v','m','p')
+       AND c.relpersistence <> 't'
+       AND c.relname NOT IN ('pg_stat_statements')
+       AND n.nspname NOT IN ('pg_catalog','pg_toast','information_schema')
+       AND (n.nspname || '.' || c.relname) !~* 'REGEXP';`}
+</CodeBlock>
+
+Make sure to replace `REGEXP` with the value of your `ignore_schema_regexp` setting.
+
+## AWS settings
+
+Only relevant if you are running your database in Amazon RDS or Amazon Aurora. See our <a href="https://pganalyze.com/docs/log-insights/setup/amazon-rds">RDS/Aurora setup instructions</a> for details.
+
+Note that the `aws_endpoint_*` settings are only relevant if you are using custom AWS endpoints. See
+[the AWS documentation](https://docs.aws.amazon.com/general/latest/gr/rande.html) for details.
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>aws_region (<code>AWS_REGION</code>)</td>
+      <td>auto-detected from hostname</td>
+      <td>Region your AWS server is running in</td>
+    </tr>
+    <tr>
+      <td>aws_db_instance_id (<code>AWS_DB_INSTANCE_ID</code>)</td>
+      <td>auto-detected from hostname</td>
+      <td>Instance ID of your Amazon RDS instance; may need to be set manually when using IP addresses or custom DNS records</td>
+    </tr>
+    <tr>
+      <td>aws_db_cluster_id (<code>AWS_DB_CLUSTER_ID</code>)</td>
+      <td>auto-detected from hostname</td>
+      <td>Cluster ID of your Amazon Aurora cluster (either cluster or reader endpoint); may need to be set manually when using IP addresses or custom DNS records</td>
+    </tr>
+    <tr>
+      <td>aws_access_key_id (<code>AWS_ACCESS_KEY_ID</code>)</td>
+      <td>[none]</td>
+      <td>Only necessary if not using recommended <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2.html">instance roles</a> configuration</td>
+    </tr>
+    <tr>
+      <td>aws_secret_access_key (<code>AWS_SECRET_ACCESS_KEY</code>)</td>
+      <td>[none]</td>
+      <td>See above</td>
+    </tr>
+    <tr>
+      <td>aws_account_id (<code>AWS_ACCOUNT_ID</code>)</td>
+      <td>[none]</td>
+      <td>If specified, and api_system_scope (see below) is not specified, this is prepended to the auto-generated system scope (optional, can be used
+      to, e.g., differentiate staging from production)</td>
+    </tr>
+    <tr>
+      <td>db_use_iam_auth (<code>DB_USE_IAM_AUTH</code>)</td>
+      <td>false</td>
+      <td>
+        Fetches a short-lived token for logging into the database instance from the AWS API, instead of using a hardcoded password
+        in the collector configuration file. To use this setting, IAM authentication needs to be enabled on the database instance
+        / cluster, the pganalyze IAM policy needs to <a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.IAMPolicy.html">cover the "rds-db:connect" privilege</a> for
+        the pganalyze user, and the user needs to be <a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.DBAccounts.html#UsingWithRDS.IAMDBAuth.DBAccounts.PostgreSQL">granted the "rds_iam" role</a> in Postgres.
+      </td>
+    </tr>
+    <tr>
+      <td>aws_assume_role (<code>AWS_ASSUME_ROLE</code>)</td>
+      <td>[none]</td>
+      <td>If using cross-account role delegation, the ARN of the role to assume; see the <a target="_blank" href="https://docs.aws.amazon.com/IAM/latest/UserGuide/tutorial_cross-account-with-roles.html">AWS documentation</a> for details</td>
+    </tr>
+    <tr>
+      <td>aws_web_identity_token_file (<code>AWS_WEB_IDENTITY_TOKEN_FILE</code>)</td>
+      <td>[none]</td>
+      <td>If running the collector inside EKS, can be used with aws_role_arn in order to access AWS resources; see the <a target="_blank" href="https://docs.aws.amazon.com/eks/latest/userguide/pod-configuration.html">AWS documentation</a> for details</td>
+    </tr>
+    <tr>
+      <td>aws_role_arn (<code>AWS_ROLE_ARN</code>)</td>
+      <td>[none]</td>
+      <td>If running the collector inside EKS, can be used with aws_web_identity_token_file in order to access AWS resources; see the <a target="_blank" href="https://docs.aws.amazon.com/eks/latest/userguide/pod-configuration.html">AWS documentation</a> for details</td>
+    </tr>
+    <tr>
+      <td>aws_endpoint_signing_region (<code>AWS_ENDPOINT_SIGNING_REGION</code>)</td>
+      <td>[none]</td>
+      <td>Region to use for signing requests (optional, usually not required)</td>
+    </tr>
+    <tr>
+      <td>aws_endpoint_rds_url (<code>AWS_ENDPOINT_RDS_URL</code>)</td>
+      <td>[none]</td>
+      <td>URL of RDS service (optional, usually not required)</td>
+    </tr>
+    <tr>
+      <td>aws_endpoint_ec2_url (<code>AWS_ENDPOINT_EC2_URL</code>)</td>
+      <td>[none]</td>
+      <td>URL of EC2 service (optional, usually not required)</td>
+    </tr>
+    <tr>
+      <td>aws_endpoint_cloudwatch_url (<code>AWS_ENDPOINT_CLOUDWATCH_URL</code>)</td>
+      <td>[none]</td>
+      <td>URL of CloudWatch service (optional, usually not required)</td>
+    </tr>
+    <tr>
+      <td>aws_endpoint_cloudwatch_logs_url (<code>AWS_ENDPOINT_CLOUDWATCH_LOGS_URL</code>)</td>
+      <td>[none]</td>
+      <td>URL of CloudWatch log service (optional, usually not required)</td>
+    </tr>
+  </tbody>
+</table>
+
+## Azure settings
+
+Only relevant if you are running your database in Azure using Azure Database for PostgreSQL. See our
+<a href="https://pganalyze.com/docs/log-insights/setup/azure-database">Azure setup instructions</a> for details.
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>azure_db_server_name (<code>AZURE_DB_SERVER_NAME</code>)</td>
+      <td>auto-detected from hostname</td>
+      <td>Name of your server; may need to be set manually when using IP addresses or custom DNS records</td>
+    </tr>
+    <tr>
+      <td>azure_subscription_id (<code>AZURE_SUBSCRIPTION_ID</code>)</td>
+      <td>n/a, required for system stats</td>
+      <td>Subscription ID of your Azure Database server</td>
+    </tr>
+    <tr>
+      <td>azure_eventhub_namespace (<code>AZURE_EVENTHUB_NAMESPACE</code>)</td>
+      <td>n/a, required for Log Insights</td>
+      <td>Event Hub namespace to use for log handling</td>
+    </tr>
+    <tr>
+      <td>azure_eventhub_name (<code>AZURE_EVENTHUB_NAME</code>)</td>
+      <td>n/a, required for Log Insights</td>
+      <td>Event Hub name to use for log handling</td>
+    </tr>
+    <tr>
+      <td>azure_ad_tenant_id (<code>AZURE_AD_TENANT_ID</code>)</td>
+      <td>[none]</td>
+      <td>The "Directory (tenant) ID" on your application. Only necessary if not using the recommended Managed Identity setup; see the <a href="https://pganalyze.com/docs/log-insights/setup/azure-database#setting-up-authentication-using-azure-ad-application-alternative-to-managed-identity">setup instructions</a> for details</td>
+    </tr>
+    <tr>
+      <td>azure_ad_client_id (<code>AZURE_AD_CLIENT_ID</code>)</td>
+      <td>[none]</td>
+      <td>The "Application (client) ID" on your application. Only necessary if not using the recommended Managed Identity setup (see above). Alternatively, when using a Managed Identity, this can also be used to define which identity to use when a VM has multiple identities assigned.</td>
+    </tr>
+    <tr>
+      <td>azure_ad_client_secret (<code>AZURE_AD_CLIENT_SECRET</code>)</td>
+      <td>[none]</td>
+      <td>When using client secrets, specify the generated secret here</td>
+    </tr>
+    <tr>
+      <td>azure_ad_certificate_path (<code>AZURE_AD_CERTIFICATE_PATH</code>)</td>
+      <td>[none]</td>
+      <td>When using certificates, specify the path to your certificate here</td>
+    </tr>
+    <tr>
+      <td>azure_ad_certificate_password (<code>AZURE_AD_CERTIFICATE_PASSWORD</code>)</td>
+      <td>[none]</td>
+      <td>When using certificates, specify your certificate password here, if required</td>
+    </tr>
+  </tbody>
+</table>
+
+## Google Cloud Platform
+
+Only relevant if you are running your database in GCP using Google Cloud SQL or Google AlloyDB. See the <a href="https://pganalyze.com/docs/log-insights/setup/google-cloud-sql">GCP setup instructions</a> for details.
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>gcp_cloudsql_instance_id (<code>GCP_CLOUDSQL_INSTANCE_ID</code>)</td>
+      <td>n/a, required (for Cloud SQL)</td>
+      <td>Google Cloud SQL instance ID</td>
+    </tr>
+    <tr>
+      <td>gcp_alloydb_cluster_id (<code>GCP_ALLOYDB_CLUSTER_ID</code>)</td>
+      <td>n/a, required (for AlloyDB)</td>
+      <td>Google AlloyDB cluster ID</td>
+    </tr>
+    <tr>
+      <td>gcp_alloydb_instance_id (<code>GCP_ALLOYDB_INSTANCE_ID</code>)</td>
+      <td>n/a, required (for AlloyDB)</td>
+      <td>Google AlloyDB instance ID (within the given cluster)</td>
+    </tr>
+    <tr>
+      <td>gcp_project_id (<code>GCP_PROJECT_ID</code>)</td>
+      <td>n/a, required</td>
+      <td>GCP project ID; see <a href="https://cloud.google.com/resource-manager/docs/cloud-platform-resource-hierarchy#projects">Google documentation</a> for details</td>
+    </tr>
+    <tr>
+      <td>gcp_pubsub_subscription (<code>GCP_PUBSUB_SUBSCRIPTION</code>)</td>
+      <td>n/a, required for Log Insights</td>
+      <td>
+        See <a href="https://pganalyze.com/docs/log-insights/setup/google-cloud-sql#step-1-create-new-pubsub-topic-and-subscriber">
+        GCP setup instructions</a> for details</td>
+    </tr>
+    <tr>
+      <td>gcp_pubsub_max_age (<code>GCP_PUBSUB_MAX_AGE</code>)</td>
+      <td>0</td>
+      <td>
+        Allow multiple collectors to subscribe to the same topic by sending a
+        "Nack" response to Pub/Sub messages that don't match a configured
+        Postgres server, so they can be redelivered and handled by another collector.
+        <br /><br />
+        After the
+        age limit is reached, messages will always be acknowledged. Keeping the
+        limit low is recommended, e.g. 10 minutes (<code>10m</code>), maximum 24 hours (<code>24h</code>).
+      </td>
+    </tr>
+    <tr>
+      <td>gcp_credentials_file (<code>GCP_CREDENTIALS_FILE</code>)</td>
+      <td>[none]</td>
+      <td>Only necessary if not using the recommended method of assigning the Service Account to the VM directly; see <a href="https://pganalyze.com/docs/log-insights/setup/google-cloud-sql#step-3-setup-service-account">these setup instructions</a> for details</td>
+    </tr>
+    <tr>
+      <td>db_use_iam_auth (<code>DB_USE_IAM_AUTH</code>)</td>
+      <td>false</td>
+      <td>
+        Fetches a short-lived token for logging into the database instance from the Google Cloud API, instead of using a hardcoded password
+        in the collector configuration file.
+      </td>
+    </tr>
+    <tr>
+      <td>gcp_region (<code>GCP_REGION</code>)</td>
+      <td>n/a, required for IAM Authentication</td>
+      <td>GCP region of the Cloud SQL instance</td>
+    </tr>
+    <tr>
+      <td>gcp_use_public_ip (<code>GCP_USE_PUBLIC_IP</code>)</td>
+      <td>false</td>
+      <td>Set to <code>true</code> if the CloudSQL proxy connection should use the available public IP rather than the default private IP. Setting
+        to <code>true</code> when no public IP is assigned will result in a connection error.</td>
+    </tr> 
+  </tbody>
+</table>
+
+## Crunchy Bridge settings
+
+Only relevant if you are running your database in Crunchy Bridge.
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>crunchy_bridge_api_key (<code>CRUNCHY_BRIDGE_API_KEY</code>)</td>
+      <td>n/a, required for accurate Storage Space information</td>
+      <td>
+        The API key of Crunchy Bridge. When specified, the collector uses the
+        Crunchy Bridge API to obtain accurate Storage Space information, as well
+        as cluster information.
+      </td>
+    </tr>
+    <tr>
+      <td>crunchy_bridge_cluster_id (<code>CRUNCHY_BRIDGE_CLUSTER_ID</code>)</td>
+      <td>auto-detected from hostname</td>
+      <td>ID of your cluster; may need to be set manually when using IP addresses or custom DNS records</td>
+    </tr>
+  </tbody>
+</table>
+
+## Self-managed servers
+
+If running on your own infrastructure, a platform other than the cloud providers listed above, or in
+a self-managed VM on a cloud provider, the configuration settings here may be useful.
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>db_log_location (<code>LOG_LOCATION</code>)</td>
+      <td>[none]</td>
+      <td>database log file or directory location (must be readable by pganalyze system user)</td>
+    </tr>
+    <tr>
+      <td>db_data_directory (<code>DB_DATA_DIRECTORY</code>)</td>
+      <td>auto-detected</td>
+      <td>The <a href="https://www.postgresql.org/docs/16/runtime-config-file-locations.html#GUC-DATA-DIRECTORY">data_directory</a> for this server</td>
+    </tr>
+    <tr>
+      <td>db_log_syslog_server (<code>LOG_SYSLOG_SERVER</code>)</td>
+      <td>[none]</td>
+      <td>local address (host:port) to listen on for syslog messages
+        (see <a href="/docs/log-insights/setup/syslog-server">syslog server instructions</a>)</td>
+    </tr>
+    <tr>
+      <td>db_log_syslog_server_ca_file (<code>LOG_SYSLOG_SERVER_CA_FILE</code>)</td>
+      <td>[none]</td>
+      <td>
+        Path to TLS certificate authority (CA) certificate(s) to use to verify the certificate of the collector syslog server
+        (optional, not required if a certificate is signed by a trusted CA)
+      </td>
+    </tr>
+    <tr>
+      <td>db_log_syslog_server_ca_contents (<code>LOG_SYSLOG_SERVER_CA_CONTENTS</code>)</td>
+      <td>[none]</td>
+      <td>Alternative to above, using actual contents of the CA certificate(s) instead</td>
+    </tr>
+    <tr>
+      <td>db_log_syslog_server_cert_file (<code>LOG_SYSLOG_SERVER_CERT_FILE</code>)</td>
+      <td>[none]</td>
+      <td>
+        Path to the collector syslog server's TLS certificate (required for receiving logs over TLS)
+      </td>
+    </tr>
+    <tr>
+      <td>db_log_syslog_server_cert_contents (<code>LOG_SYSLOG_SERVER_CERT_CONTENTS</code>)</td>
+      <td>[none]</td>
+      <td>Alternative to above, using actual contents of the certificate instead</td>
+    </tr>
+    <tr>
+      <td>db_log_syslog_server_key_file (<code>LOG_SYSLOG_SERVER_KEY_FILE</code>)</td>
+      <td>[none]</td>
+      <td>
+        Path to the secret key used for the collector syslog server's certificate (required for receiving logs over TLS)
+      </td>
+    </tr>
+    <tr>
+      <td>db_log_syslog_server_key_contents (<code>LOG_SYSLOG_SERVER_KEY_CONTENTS</code>)</td>
+      <td>[none]</td>
+      <td>Alternative to above, using actual contents of the secret key instead</td>
+    </tr>
+    <tr>
+      <td>db_log_syslog_server_client_ca_file (<code>LOG_SYSLOG_SERVER_CLIENT_CA_FILE</code>)</td>
+      <td>[none]</td>
+      <td>
+        Path to TLS certificate authority (CA) certificate(s) to use to verify the certificate of the client
+        that is sending logs to the collector syslog server, such as rsyslog
+        (optional, not required if a client doesn't provide a certificate or a client certificate is signed by a trusted CA)
+      </td>
+    </tr>
+    <tr>
+      <td>db_log_syslog_server_client_ca_contents (<code>LOG_SYSLOG_SERVER_CLIENT_CA_CONTENTS</code>)</td>
+      <td>[none]</td>
+      <td>Alternative to above, using actual contents of the CA certificate(s) instead</td>
+    </tr>
+    <tr>
+      <td>always_collect_system_data (<code>PGA_ALWAYS_COLLECT_SYSTEM_DATA</code>)</td>
+      <td>false</td>
+      <td>Always gather local system metrics, regardless of whether the database address is local or
+          remote. This is useful for setups which connect to a local database with a non-local IP
+          address.</td>
+    </tr>
+    <tr>
+      <td>db_log_otel_server (<code>LOG_OTEL_SERVER</code>)</td>
+      <td>[none]</td>
+      <td>local address (host:port) to listen on for OpenTelemetry log data model messages
+        (see <a href="/docs/log-insights/setup/opentelemetry">Kubernetes with OpenTelemetry instructions</a>)</td>
+    </tr>
+    <tr>
+      <td>db_log_otel_k8s_pod (<code>LOG_OTEL_K8S_POD</code>)</td>
+      <td>[none]</td>
+      <td>The pod name (e.g., <code>mypod</code>) or <code>namespace/mypod</code> to filter matching logs</td>
+    </tr>
+    <tr>
+      <td>db_log_otel_k8s_labels (<code>LOG_OTEL_K8S_LABELS</code>)</td>
+      <td>[none]</td>
+      <td>
+        Comma-separated <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors">Kubernetes label selectors</a> to filter matching logs.
+        Only support equality-based selectors.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+## OpenTelemetry exporter settings
+
+To integrate with application performance monitoring (APM) tools, the collector
+can optionally act as an [OpenTelemetry tracing](https://opentelemetry.io/docs/concepts/signals/traces/) exporter.
+This adds data from pganalyze into existing application traces, and allows
+application engineers to have a quick way to find out if slow database queries are causing performance problems in the app.
+
+The exporter, if enabled, will send a tracing span for each [collected EXPLAIN plan](/docs/explain/setup) to the configured OpenTelemetry endpoint, with a link back to the full plan in pganalyze via the `db.postgresql.plan` span attribute.
+
+Note that this requires queries to have parent span information propagated using the `traceparent` query tag, as defined in the [W3 Trace Context specification](https://www.w3.org/TR/trace-context/#traceparent-header). This is enabled on the application side by libraries like [sqlcommenter](https://google.github.io/sqlcommenter/).
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>otel_exporter_otlp_endpoint (<code>OTEL_EXPORTER_OTLP_ENDPOINT</code>)</td>
+      <td>[none]</td>
+      <td>OpenTelemetry endpoint to export tracing data to, for example <code>http://localhost:4318</code>. Both HTTP (secure and insecure) and gRPC (secure) protocols are supported. The endpoint can either be an OpenTelemetry collector, or a third-party service providing an OTLP endpoint such as Honeycomb or New Relic.</td>
+    </tr>
+    <tr>
+      <td>otel_exporter_otlp_headers (<code>OTEL_EXPORTER_OTLP_HEADERS</code>)</td>
+      <td>[none]</td>
+      <td>OpenTelemetry OTLP headers, for example to set API keys for managed services like Honeycomb (<code>x-honeycomb-team=KEY</code>) and New Relic (<code>api-key=KEY</code>).</td>
+    </tr>
+    <tr>
+      <td>otel_service_name (<code>OTEL_SERVICE_NAME</code>)</td>
+      <td>Postgres (pganalyze)</td>
+      <td>The logical name of the service. The tracing span sent by the collector will use this name.</td>
+    </tr>
+  </tbody>
+</table>
+
+
+## Additional settings
+
+Like the general settings above, but less commonly used. We only recommend using these settings after
+talking to pganalyze support.
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>api_system_id (<code>PGA_API_SYSTEM_ID</code>)</td>
+      <td>Automatically detected</td>
+      <td>Overrides the ID of the system, used for uniquely identifying the server with the pganalyze API.
+      This is commonly what's used to refer to a single server, and defaults to the instance ID for managed
+      database providers.</td>
+    </tr>
+    <tr>
+      <td>api_system_type (<code>PGA_API_SYSTEM_TYPE</code>)</td>
+      <td>Automatically detected</td>
+      <td>Overrides the type of the system, used for uniquely identifying the server with the pganalyze API.
+      Must be one of the following: amazon_rds, azure_database, google_cloudsql, self_hosted or heroku.</td>
+    </tr>
+    <tr>
+      <td>api_system_scope (<code>PGA_API_SYSTEM_SCOPE</code>)</td>
+      <td>Automatically detected</td>
+      <td>Overrides the scope of the system, used for uniquely identifying the server with the pganalyze API.
+      Can be used for auxiliary identifying characteristics (e.g., region of a server ID that's re-used).</td>
+    </tr>
+    <tr>
+      <td>api_system_scope_fallback (<code>PGA_API_SYSTEM_SCOPE_FALLBACK</code>)</td>
+      <td>[none]</td>
+      <td>When the pganalyze backend receives a snapshot with a fallback scope set, and there is no server created
+      with the regular scope, it will first search the servers with the fallback scope. If found, that server's
+      scope will be updated to the (new) regular scope. If not found, a new server will be created with the regular
+      scope. The main goal of the fallback scope is to avoid creating a duplicate server when changing the scope value.</td>
+    </tr>
+    <tr>
+      <td>db_log_docker_tail</td>
+      <td>[none]</td>
+      <td>Experimental: name of docker container to collect logs from using <code>docker logs -t</code>.
+      This requires that the collector runs on the Docker host.</td>
+    </tr>
+    <tr>
+      <td>disable_citus_schema_stats (<code>DISABLE_CITUS_SCHEMA_STATS</code>)</td>
+      <td>none</td>
+      <td>
+        Either <code>none</code>, <code>index</code>, or <code>all</code>.<br /><br />
+        If using the Citus extension in your database, turn off the collection of statistics for distributed indexes,
+        or both distributed indexes and distributed tables. For very large schemas, this collection can error out due to
+        timeouts or locks. When using this option it's recommended to instead monitor the workers directly for table and
+        index sizes.
+      </td>
+    </tr>
+    <tr>
+      <td>query_stats_interval (<code>QUERY_STATS_INTERVAL</code>)</td>
+      <td>60</td>
+      <td>How often to collect query statistics, in seconds; supported values are <code>60</code> (once a minute) and <code>600</code> (once every ten minutes)</td>
+    </tr>
+    <tr>
+      <td>max_collector_connections (<code>MAX_COLLECTOR_CONNECTION</code>)</td>
+      <td>10</td>
+      <td>
+        Maximum connections allowed to the database with the collector application_name, in order to protect
+        against accidental connection leaks in the collector
+      </td>
+    </tr>
+    <tr>
+      <td>http_proxy (<code>HTTP_PROXY</code>)</td>
+      <td>[none]</td>
+      <td>Proxy to be used for all HTTP connections, such as API calls. Use for proxies that do not support SSL. Example: <code>http://username:password@myproxy</code></td>
+    </tr>
+    <tr>
+      <td>https_proxy (<code>HTTPS_PROXY</code>)</td>
+      <td>[none]</td>
+      <td>Proxy to be used for all HTTP connections, such as API calls. Use for proxies that support SSL. Example: <code>https://username:password@myproxy</code></td>
+    </tr>
+    <tr>
+      <td>no_proxy (<code>NO_PROXY</code>)</td>
+      <td>[none]</td>
+      <td>Comma-delimited list of hostnames that should be accessed directly, without using a configured proxy. Has no effect unless
+      either HTTP_PROXY or HTTPS_PROXY is specified.</td>
+    </tr>
+    <tr>
+      <td>disable_logs (<code>PGA_DISABLE_LOGS</code>)</td>
+      <td>false</td>
+      <td>Disable Log Insights data collection</td>
+    </tr>
+    <tr>
+      <td>disable_activity (<code>PGA_DISABLE_ACTIVITY</code>)</td>
+      <td>false</td>
+      <td>Disable activity snapshot data collection (VACUUM, connection traces, etc.)</td>
+    </tr>
+    <tr>
+      <td>error_callback</td>
+      <td>[none]</td>
+      <td>
+        Script to call if snapshot fails (learn more <a target="_blank" href="https://github.com/pganalyze/collector/#successerror-callbacks">in the collector README</a>)
+      </td>
+    </tr>
+    <tr>
+      <td>success_callback</td>
+      <td>[none]</td>
+      <td>
+        Script to call if snapshot succeeds (learn more <a target="_blank" href="https://github.com/pganalyze/collector/#successerror-callbacks">in the collector README</a>)
+      </td>
+    </tr>
+  </tbody>
+</table>

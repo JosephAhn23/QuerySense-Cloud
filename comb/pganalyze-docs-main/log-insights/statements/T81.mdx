@@ -1,0 +1,30 @@
+---
+work_in_progress: true
+log_classification: T81
+log_title: Canceling statement due to timeout
+log_category: statements
+collector_key: STATEMENT_CANCELED_TIMEOUT
+tooltip: Statement was canceled since it ran longer than statement_timeout
+urgency: medium
+sqlstate: "57014 (Class 57 - Operator Intervention: query_canceled)"
+color: "#ff0000"
+---
+
+**Example Postgres Log Output:**
+
+```
+ERROR: canceling statement due to statement timeout
+STATEMENT: SELECT 1
+```
+
+**Explanation:**
+
+...
+
+**Recommended Action:**
+
+...
+
+**Learn More:**
+
+No additional resources available.
