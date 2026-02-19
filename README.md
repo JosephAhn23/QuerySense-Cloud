@@ -38,9 +38,43 @@ querysense diff before.json after.json
 querysense ci gate
 ```
 
-## What It Detects
+## Example Output
 
-37+ rules including row estimation errors, sequential scans on large tables, missing indexes, disk spills, correlated subqueries, and more. Each finding includes a severity score and a concrete SQL fix.
+```
+$ querysense analyze bad_estimate.json
+
+[CRITICAL] Stale statistics on orders (5000x underestimated)
+  Fix: ANALYZE orders;
+
+[CRITICAL] Time bottleneck: Hash Join consumes 96% of execution time
+  Fix: Check row estimates and statistics freshness
+
+[WARNING] Seq Scan on orders (cost=2,134, 250,000 rows)
+  Fix: CREATE INDEX idx_orders_total_amount ON orders (total_amount);
+
+[WARNING] High cache miss rate on orders: 38% of blocks read from disk
+  Fix: Increase shared_buffers or pre-warm cache
+
+[WARNING] Full table scan on users (50,000 rows, no filter)
+  Fix: Add a WHERE clause or LIMIT to filter rows
+
+12 findings in 2.1ms
+```
+
+## Tests
+
+190 tests, all passing in under 1 second.
+
+```
+$ pytest tests/ -v
+
+tests/test_parser.py      29 passed
+tests/test_integration.py  37 passed
+tests/test_dag.py          20 passed
+tests/test_ir.py           15 passed
+...
+======================== 190 passed in 0.89s ========================
+```
 
 ## License
 
