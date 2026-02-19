@@ -38,43 +38,18 @@ querysense diff before.json after.json
 querysense ci gate
 ```
 
-## Example Output
+## Example
 
 ```
-$ querysense analyze bad_estimate.json
+$ querysense analyze plan.json
 
-[CRITICAL] Stale statistics on orders (5000x underestimated)
-  Fix: ANALYZE orders;
+  Seq Scan on orders (250,000 rows) → CREATE INDEX idx_orders_status ON orders(status);
+  Row estimate 5,000x off on orders → ANALYZE orders;
 
-[CRITICAL] Time bottleneck: Hash Join consumes 96% of execution time
-  Fix: Check row estimates and statistics freshness
-
-[WARNING] Seq Scan on orders (cost=2,134, 250,000 rows)
-  Fix: CREATE INDEX idx_orders_total_amount ON orders (total_amount);
-
-[WARNING] High cache miss rate on orders: 38% of blocks read from disk
-  Fix: Increase shared_buffers or pre-warm cache
-
-[WARNING] Full table scan on users (50,000 rows, no filter)
-  Fix: Add a WHERE clause or LIMIT to filter rows
-
-12 findings in 2.1ms
+  2 findings in 1.5ms
 ```
 
-## Tests
-
-190 tests, all passing in under 1 second.
-
-```
-$ pytest tests/ -v
-
-tests/test_parser.py      29 passed
-tests/test_integration.py  37 passed
-tests/test_dag.py          20 passed
-tests/test_ir.py           15 passed
-...
-======================== 190 passed in 0.89s ========================
-```
+37+ detection rules. 190 tests passing in <1s.
 
 ## License
 
