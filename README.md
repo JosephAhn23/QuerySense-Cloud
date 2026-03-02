@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/readme/hero.png" alt="QuerySense dashboard preview showing sequential scan fixed to index scan" width="920">
+  <img src="docs/media/readme/readme-hero-dark.png" alt="QuerySense hero showing slow SQL before and optimized output after" width="920">
 </p>
 
 <p align="center">
@@ -71,32 +71,22 @@ querysense fix plan.json > fixes.sql
 
 ## Visual Walkthrough
 
-Real screenshots from this repository's sample plan and analyzer output:
+Dark-mode visuals for a quick product tour:
 
 ```text
 docs/media/readme/
-  hero.png
-  01-before-plan.png
-  02-analyze-output.png
-  03-fix-generated.png
-  04-after-diff.png
+  readme-hero-dark.png
+  readme-workflow-dark.png
+  readme-cli-dark.png
 ```
 
-### Step 1 — Before: slow plan
-![Before plan placeholder](docs/media/readme/01-before-plan.png)
-**Before:** sequential scan, high cost, long runtime
+### Workflow view
+![Workflow view](docs/media/readme/readme-workflow-dark.png)
+**Before -> Analyze -> After:** upload a plan, get actionable fixes, validate improvements.
 
-### Step 2 — Analyze: instant diagnosis
-![Analyze output placeholder](docs/media/readme/02-analyze-output.png)
-**Analyze:** top findings, severity, and expected impact
-
-### Step 3 — Fix: copy-paste SQL
-![Fix output placeholder](docs/media/readme/03-fix-generated.png)
-**Fix:** create index, update stats, or rewrite query
-
-### Step 4 — After: measurable win
-![After diff placeholder](docs/media/readme/04-after-diff.png)
-**After:** cost drops and execution time improves
+### CLI proof
+![CLI proof](docs/media/readme/readme-cli-dark.png)
+Realistic terminal-style proof block for analysis and fix commands.
 
 ---
 
