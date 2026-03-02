@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="query.png" alt="QuerySense dashboard preview showing sequential scan fixed to index scan" width="920">
+  <img src="docs/media/readme/hero.png" alt="QuerySense dashboard preview showing sequential scan fixed to index scan" width="920">
 </p>
 
 <p align="center">
@@ -26,18 +26,18 @@
 
 ## Why people like it
 
-- ⚡ **Fast wins:** see bottlenecks and likely fixes right away
-- 🧠 **Human-friendly:** plain-English output (`--simple`, `--eli5`) for non-DBA users
-- 🛠 **Actionable:** generate SQL fixes and migration files from findings
-- 🌐 **Multi-engine:** PostgreSQL, MySQL, SQL Server, MongoDB support in one CLI
-- 🔒 **Private-first:** works offline, no account required
+- **Fast wins:** see bottlenecks and likely fixes right away
+- **Human-friendly:** plain-English output (`--simple`, `--eli5`) for non-DBA users
+- **Actionable:** generate SQL fixes and migration files from findings
+- **Multi-engine:** PostgreSQL, MySQL, SQL Server, MongoDB support in one CLI
+- **Private-first:** works offline, no account required
 
 ---
 
 ## Glow Workflow
 
-> 🌑 **Before:** "Why is this query slow?"  
-> 🌈 **After:** "Here is the exact fix and expected impact."
+> **Before:** "Why is this query slow?"  
+> **After:** "Here is the exact fix and expected impact."
 
 ### 1) Analyze a plan
 
@@ -69,33 +69,34 @@ querysense fix plan.json > fixes.sql
 
 ---
 
-## Visual Walkthrough (for WOW factor)
+## Visual Walkthrough
 
-> Add 3-4 GIFs/screenshots in `assets/` and keep captions short.
+Real screenshots from this repository's sample plan and analyzer output:
 
 ```text
-assets/
+docs/media/readme/
+  hero.png
   01-before-plan.png
-  02-analyze-output.gif
+  02-analyze-output.png
   03-fix-generated.png
-  04-after-diff.gif
+  04-after-diff.png
 ```
 
 ### Step 1 — Before: slow plan
-![Before plan placeholder](assets/01-before-plan.png)
-**🔴 Before:** sequential scan, high cost, long runtime
+![Before plan placeholder](docs/media/readme/01-before-plan.png)
+**Before:** sequential scan, high cost, long runtime
 
 ### Step 2 — Analyze: instant diagnosis
-![Analyze output placeholder](assets/02-analyze-output.gif)
-**🟣 Analyze:** top findings + severity + likely speedup
+![Analyze output placeholder](docs/media/readme/02-analyze-output.png)
+**Analyze:** top findings, severity, and expected impact
 
 ### Step 3 — Fix: copy-paste SQL
-![Fix output placeholder](assets/03-fix-generated.png)
-**🟢 Fix:** create index, update stats, or rewrite query
+![Fix output placeholder](docs/media/readme/03-fix-generated.png)
+**Fix:** create index, update stats, or rewrite query
 
 ### Step 4 — After: measurable win
-![After diff placeholder](assets/04-after-diff.gif)
-**✨ After:** cost drops and execution time improves
+![After diff placeholder](docs/media/readme/04-after-diff.png)
+**After:** cost drops and execution time improves
 
 ---
 
@@ -119,20 +120,20 @@ Analyzed 2 findings in 1.5ms
 
 ## Feature Highlights
 
-- 🔍 **Plan Analysis:** detect costly scans, bad estimates, spills, and join issues
-- 🧪 **Safe SQL Rewrites:** `querysense rewrite --sql ...` with optional sandbox checks
-- 📦 **Migration Outputs:** Flyway, Liquibase, Alembic, Django, dbmate formats
-- 📉 **I/O Visibility:** buffer-focused analysis and before/after comparisons
-- 🧰 **CI Integration:** fail builds on performance regressions with `querysense ci`
+- **Plan Analysis:** detect costly scans, bad estimates, spills, and join issues
+- **Safe SQL Rewrites:** `querysense rewrite --sql ...` with optional sandbox checks
+- **Migration Outputs:** Flyway, Liquibase, Alembic, Django, dbmate formats
+- **I/O Visibility:** buffer-focused analysis and before/after comparisons
+- **CI Integration:** fail builds on performance regressions with `querysense ci`
 
 ---
 
 ## Credibility Snapshot
 
-- ✅ **Version:** `2.0.0`
-- ✅ **Tests:** 190+ tests
-- ✅ **Rules:** 37+ detection rules
-- ✅ **Python:** 3.11+
+- **Version:** `2.0.0`
+- **Tests:** 190+ tests
+- **Rules:** 37+ detection rules
+- **Python:** 3.11+
 
 ---
 
